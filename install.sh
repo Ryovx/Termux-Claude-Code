@@ -56,7 +56,7 @@
 #   ║   ✔  You MAY use, study, modify, and redistribute this script     ║
 #   ║      under the terms of the GNU General Public License v3.0.      ║
 #   ║                                                                   ║
-#   ║   ✔  We are proud members of the Open Innovation Network (OIN)    ║
+#   ║   ✔  We are proud members of the Open Invention Network (OIN)    ║
 #   ║      and believe in protecting open-source software from          ║
 #   ║      patent aggression while keeping it free for everyone.        ║
 #   ║                                                                   ║
