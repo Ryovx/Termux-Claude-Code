@@ -293,7 +293,7 @@ Anthropic تنشر بناء `linux-arm64-musl` يعمل على Android عند ت
 <a id="contributing"></a>
 ## 🤝 المساهمة
 
-راجع [CONTRIBUTING.md](CONTRIBUTING.md) للحصول على الإرشادات الكاملة.
+راجع [CONTRIBUTING.ar.md](CONTRIBUTING.ar.md) للحصول على الإرشادات الكاملة.
 
 - 🐛 **الإبلاغ عن الأخطاء** — [افتح issue](https://github.com/Ryovx/Termux-Claude-Code/issues/new)
 - 💡 **اقتراح ميزات** — [ابدأ نقاشًا](https://github.com/Ryovx/Termux-Claude-Code/discussions)
