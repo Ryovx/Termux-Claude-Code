@@ -309,9 +309,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
 
 This project is licensed under the **GNU General Public License v3.0 or later** (SPDX: `GPL-3.0-or-later`). See [LICENSE](LICENSE) for the full text.
 
-### 🤝 Open Innovation Network (OIN)
+### 🤝 Open Invention Network (OIN)
 
-**Ryovx is a proud member of the [Open Innovation Network (OIN)](https://openinventionnetwork.com/)** — a global consortium that protects open-source software from patent aggression.
+**Ryovx is a proud member of the [Open Invention Network (OIN)](https://openinventionnetwork.com/)** — a global consortium that protects open-source software from patent aggression.
 
 In line with OIN's mission and our commitment to the Termux community, **most of Ryovx's service products are released under GNU GPLv3**.
 
