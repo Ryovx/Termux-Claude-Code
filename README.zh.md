@@ -293,7 +293,7 @@ Anthropic 发布的 `linux-arm64-musl` 版本在提供正确加载器时可以�
 <a id="contributing"></a>
 ## 🤝 贡献
 
-完整指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+完整指南请参阅 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)。
 
 - 🐛 **报告错误** — [提交 issue](https://github.com/Ryovx/Termux-Claude-Code/issues/new)
 - 💡 **建议功能** — [发起讨论](https://github.com/Ryovx/Termux-Claude-Code/discussions)
