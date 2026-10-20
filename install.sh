@@ -70,10 +70,9 @@
 #
 #   ONE COMMAND INSTALL
 #   ─────────────────────────────────────────────────────────────────────
-#   Users install with a single command (replace <owner>/<repo> with
-#   your actual GitHub repository path before publishing):
+#   Users install with a single command:
 #
-#       curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/install.sh | bash
+#       curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh | bash
 #
 #   UNINSTALL
 #   ─────────────────────────────────────────────────────────────────────
