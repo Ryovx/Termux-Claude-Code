@@ -307,9 +307,9 @@ Anthropic تنشر بناء `linux-arm64-musl` يعمل على Android عند ت
 
 هذا المشروع مرخّص تحت **GNU General Public License v3.0 أو أحدث** (SPDX: `GPL-3.0-or-later`). راجع [LICENSE](LICENSE) للنص الكامل.
 
-### 🤝 Open Innovation Network (OIN)
+### 🤝 Open Invention Network (OIN)
 
-**Ryovx عضو فخور في [Open Innovation Network (OIN)](https://openinventionnetwork.com/)** — تحالف عالمي يحمي البرمجيات مفتوحة المصدر من الاعتداءات على براءات الاختراع.
+**Ryovx عضو فخور في [Open Invention Network (OIN)](https://openinventionnetwork.com/)** — تحالف عالمي يحمي البرمجيات مفتوحة المصدر من الاعتداءات على براءات الاختراع.
 
 تماشيًا مع مهمة OIN والتزامنا بمجتمع Termux، **تُصدر معظم منتجات Ryovx الخدمية تحت GNU GPLv3**.
 
