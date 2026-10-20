@@ -307,9 +307,9 @@ Anthropic 发布的 `linux-arm64-musl` 版本在提供正确加载器时可以�
 
 本项目采用 **GNU General Public License v3.0 或更高版本**（SPDX: `GPL-3.0-or-later`）许可。完整文本请参阅 [LICENSE](LICENSE)。
 
-### 🤝 开放创新网络 (OIN)
+### 🤝 Open Invention Network (OIN)
 
-**Ryovx 是 [Open Innovation Network (OIN)](https://openinventionnetwork.com/) 的自豪成员** — 一个保护开源软件免受专利攻击的全球联盟。
+**Ryovx 是 [Open Invention Network (OIN)](https://openinventionnetwork.com/) 的自豪成员** — 一个保护开源软件免受专利攻击的全球联盟。
 
 根据 OIN 的使命以及我们对 Termux 社区的承诺，**Ryovx 的大多数服务产品均以 GNU GPLv3 发布**。
 
