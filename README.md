@@ -13,12 +13,12 @@
 [![Architecture: aarch64](https://img.shields.io/badge/Architecture-aarch64-orange?style=for-the-badge&logo=arm&logoColor=white)](#requirements)
 [![Made with Bash](https://img.shields.io/badge/Made%20with-Bash-4EAA25?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
 
-[![Version](https://img.shields.io/github/v/release/Ryovx/termux-claude-code?style=for-the-badge&logo=github&label=Version&color=brightgreen)](https://github.com/Ryovx/termux-claude-code/releases)
-[![Stars](https://img.shields.io/github/stars/Ryovx/termux-claude-code?style=for-the-badge&logo=github&color=yellow)](https://github.com/Ryovx/termux-claude-code/stargazers)
-[![Forks](https://img.shields.io/github/forks/Ryovx/termux-claude-code?style=for-the-badge&logo=github&color=blue)](https://github.com/Ryovx/termux-claude-code/network/members)
-[![Issues](https://img.shields.io/github/issues/Ryovx/termux-claude-code?style=for-the-badge&logo=github&color=red)](https://github.com/Ryovx/termux-claude-code/issues)
-[![Last Commit](https://img.shields.io/github/last-commit/Ryovx/termux-claude-code?style=for-the-badge&logo=github&color=purple)](https://github.com/Ryovx/termux-claude-code/commits/main)
-[![Repo Size](https://img.shields.io/github/repo-size/Ryovx/termux-claude-code?style=for-the-badge&logo=github&color=informational)](https://github.com/Ryovx/termux-claude-code)
+[![Version](https://img.shields.io/github/v/release/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&label=Version&color=brightgreen)](https://github.com/Ryovx/Termux-Claude-Code/releases)
+[![Stars](https://img.shields.io/github/stars/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=yellow)](https://github.com/Ryovx/Termux-Claude-Code/stargazers)
+[![Forks](https://img.shields.io/github/forks/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=blue)](https://github.com/Ryovx/Termux-Claude-Code/network/members)
+[![Issues](https://img.shields.io/github/issues/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=red)](https://github.com/Ryovx/Termux-Claude-Code/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=purple)](https://github.com/Ryovx/Termux-Claude-Code/commits/main)
+[![Repo Size](https://img.shields.io/github/repo-size/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=informational)](https://github.com/Ryovx/Termux-Claude-Code)
 
 <br/>
 
@@ -68,7 +68,7 @@
 Open Termux and paste **one line**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Ryovx/termux-claude-code/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh | bash
 ```
 
 That's it. When it finishes, run:
@@ -80,7 +80,7 @@ claude
 > 💡 **Prefer to review the script first?** Download it, read it, then run it:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/Ryovx/termux-claude-code/main/install.sh -o install.sh
+> curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh -o install.sh
 > less install.sh
 > bash install.sh
 > ```
@@ -398,7 +398,7 @@ The installer never reads, stores, or transmits your `ANTHROPIC_API_KEY`. It onl
 **Always.** Download first, review, then run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Ryovx/termux-claude-code/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh -o install.sh
 less install.sh
 bash install.sh
 ```
@@ -411,8 +411,8 @@ bash install.sh
 
 Contributions are welcome and appreciated! Here's how you can help:
 
-- 🐛 **Report bugs** — [Open an issue](https://github.com/Ryovx/termux-claude-code/issues/new)
-- 💡 **Suggest features** — [Start a discussion](https://github.com/Ryovx/termux-claude-code/discussions)
+- 🐛 **Report bugs** — [Open an issue](https://github.com/Ryovx/Termux-Claude-Code/issues/new)
+- 💡 **Suggest features** — [Start a discussion](https://github.com/Ryovx/Termux-Claude-Code/discussions)
 - 🔧 **Submit pull requests** — Fork, branch, commit, PR
 - 📖 **Improve documentation** — Typos, clarifications, translations
 - 🌐 **Add translations** — Create `README.<lang>.md` and link it at the top
@@ -457,7 +457,7 @@ Just as we provide this tool **completely free of charge**, we kindly ask that y
 - 📣 **Share** it with the Termux community
 - 💬 **Help** others in the discussions
 
-**If you see this software being sold against this request, please [open an issue](https://github.com/Ryovx/termux-claude-code/issues)** — not because it violates the license, but because it violates the spirit of the project.
+**If you see this software being sold against this request, please [open an issue](https://github.com/Ryovx/Termux-Claude-Code/issues)** — not because it violates the license, but because it violates the spirit of the project.
 
 ### 📄 Full License Text
 
@@ -497,7 +497,7 @@ Want to add another language? See [Contributing](#contributing).
 
 ⭐ **If this project saved you hours of head-scratching, consider starring the repo** ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Ryovx/termux-claude-code&type=Date)](https://star-history.com/#Ryovx/termux-claude-code&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Ryovx/Termux-Claude-Code&type=Date)](https://star-history.com/#Ryovx/Termux-Claude-Code&Date)
 
 <br/>
 
