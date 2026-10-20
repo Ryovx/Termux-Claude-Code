@@ -65,23 +65,23 @@
 
 Open Termux and paste **one line**:
 
-````bash
+```bash
 curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh | bash
-````
+```
 
 That's it. When it finishes, run:
 
-````bash
+```bash
 claude
-````
+```
 
 > 💡 **Prefer to review the script first?** Download it, read it, then run it:
 >
-> ````bash
+> ```bash
 > curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh -o install.sh
 > less install.sh
 > bash install.sh
-> ````
+> ```
 
 ---
 
@@ -115,16 +115,16 @@ After installation, the following commands are available immediately:
 
 **Option A — API Key (recommended):**
 
-````bash
+```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 claude
-````
+```
 
 **Option B — OAuth:**
 
-````bash
+```bash
 claude /login
-````
+```
 
 ---
 
@@ -149,9 +149,9 @@ claude /login
 
 Claude Code ships a `linux-arm64-musl` ELF binary. Termux runs on **Android's Bionic libc**, not musl. Direct execution fails with:
 
-````text
+```text
 cannot execute: required file not found
-````
+```
 
 **What doesn't work:**
 
@@ -175,10 +175,10 @@ That's it. **No patchelf, no proot, no chroot, no magic.**
 <details>
 <summary><b>`claude: command not found` after install</b></summary>
 
-````bash
+```bash
 hash -r
 which claude
-````
+```
 
 If still missing, run `claude-fix`.
 
@@ -187,15 +187,15 @@ If still missing, run `claude-fix`.
 <details>
 <summary><b>`claude` broke after `npm update -g`</b></summary>
 
-````bash
+```bash
 claude-fix
-````
+```
 
 Or use the built-in updater:
 
-````bash
+```bash
 claude-update
-````
+```
 
 </details>
 
@@ -211,9 +211,9 @@ The launcher handles this via `env -u LD_PRELOAD`. If you see this, someone bypa
 
 You're likely running a `patchelf`-modified binary from an older install. Force a clean reinstall:
 
-````bash
+```bash
 bash install.sh --force
-````
+```
 
 </details>
 
@@ -224,15 +224,15 @@ bash install.sh --force
 
 **One command:**
 
-````bash
+```bash
 claude-uninstall
-````
+```
 
 Or, if you still have `install.sh` locally:
 
-````bash
+```bash
 bash install.sh --uninstall
-````
+```
 
 ---
 
@@ -270,9 +270,9 @@ No. Use [F-Droid](https://f-droid.org/en/packages/com.termux/) or [GitHub Releas
 <details>
 <summary><b>How do I update Claude Code?</b></summary>
 
-````bash
+```bash
 claude-update
-````
+```
 
 </details>
 
