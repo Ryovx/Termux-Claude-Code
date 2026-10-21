@@ -358,9 +358,9 @@ musl الأصلي يقرأ `/etc/resolv.conf`، وهو غير متوفر في Te
 
 بيئة musl المعدّلة التي يشحنها هذا المثبّت عمل منفصل، مرخّص تحت **رخصة MIT**. راجع [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) للتفاصيل.
 
-### 🤝 Open Innovation Network (OIN)
+### 🤝 شبكة الاختراعات المفتوحة (OIN)
 
-**Ryovx عضو فخور في [Open Innovation Network (OIN)](https://openinventionnetwork.com/)** — تحالف عالمي يحمي البرمجيات مفتوحة المصدر من الاعتداءات على براءات الاختراع.
+**Ryovx عضو فخور في [Open Invention Network (OIN)](https://openinventionnetwork.com/)** — تحالف عالمي يحمي البرمجيات مفتوحة المصدر من الاعتداءات على براءات الاختراع.
 
 تماشيًا مع مهمة OIN والتزامنا بمجتمع Termux، **تُصدر معظم منتجات Ryovx الخدمية تحت GNU GPLv3**.
 
