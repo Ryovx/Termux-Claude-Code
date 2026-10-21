@@ -1,0 +1,21 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Ask a Question
+    url: https://github.com/Ryovx/Termux-Claude-Code/discussions
+    about: For general questions, ideas, and help, please use Discussions.
+
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/Ryovx/Termux-Claude-Code/security/advisories/new
+    about: Please do NOT open a public issue for security issues. Report privately.
+
+  - name: 📖 Read the Documentation
+    url: https://github.com/Ryovx/Termux-Claude-Code/blob/main/README.md
+    about: Many answers are already in the README (English, Arabic, Chinese).
+
+  - name: 🧩 Musl-on-Termux Runtime
+    url: https://github.com/Ryovx/Musl-on-Termux/issues
+    about: Issues specific to the patched musl runtime should go to the Musl-on-Termux repo.
+
+  - name: 🤖 Claude Code (Anthropic)
+    url: https://www.anthropic.com/support
+    about: For Claude Code itself (not this installer), contact Anthropic support.
