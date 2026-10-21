@@ -11,8 +11,8 @@
 [![许可证: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge&logo=gnu&logoColor=white)](https://www.gnu.org/licenses/gpl-3.0)
 [![平台: Termux](https://img.shields.io/badge/Platform-Termux-black?style=for-the-badge&logo=android&logoColor=white)](#requirements)
 [![架构: aarch64](https://img.shields.io/badge/Architecture-aarch64-orange?style=for-the-badge&logo=arm&logoColor=white)](#requirements)
+[![版本: 2.0.0](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=for-the-badge&logo=github)](#what-gets-installed)
 
-[![版本](https://img.shields.io/github/v/release/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&label=Version&color=brightgreen)](https://github.com/Ryovx/Termux-Claude-Code/releases)
 [![星标](https://img.shields.io/github/stars/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=yellow)](https://github.com/Ryovx/Termux-Claude-Code/stargazers)
 [![分叉](https://img.shields.io/github/forks/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=blue)](https://github.com/Ryovx/Termux-Claude-Code/network/members)
 
@@ -50,13 +50,13 @@
 - 🚀 **原生执行** — 运行 Anthropic 发布的*官方* `linux-arm64-musl` 二进制文件。
 - 🛡️ **无需 proot、无需 chroot** — 无容器、无虚拟机、无模拟。
 - 🔧 **无需 patchelf** — 有意避免在 Android 内核上修补 musl 二进制文件时出现的 SIGSEGV。
-- 🌐 **DNS 开箱即用** — 附带修补过的 musl 加载器，读取 `$PREFIX/etc/resolv.conf`，必要时回退到公共 DNS。
-- 🔐 **供应链验证** — musl 运行时从已签名的 GitHub 发布下载，并在安装前根据固定的 SHA256 进行验证。
+- 🌐 **开箱即用的 DNS** — 使用由 [Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 提供的**已修补 musl 加载器**，读取 `$PREFIX/etc/resolv.conf` 并在未配置时回退到确定性的公共 DNS。
 - ⚡ **一条命令安装** — 复制、粘贴、完成。
 - 🔄 **智能更新** — 如果已是最新版本，`claude-update` 会跳过 280 MB 的下载。
 - 💚 **自我修复** — 手动 `npm update` 后，`claude-fix` 会恢复启动器。
 - 🧹 **干净卸载** — `claude-uninstall` 会删除所有内容。
 - 🚫 **零 rc 文件修改** — 从不触碰 `~/.bashrc` 或 `~/.zshrc`。
+- 🔐 **SHA256 校验** — musl 运行时在使用前进行完整性校验。
 
 ---
 
@@ -92,9 +92,9 @@ claude
 |---|---|
 | **Termux** | 来自 [F-Droid](https://f-droid.org/en/packages/com.termux/) 或 [GitHub Releases](https://github.com/termux/termux-app/releases) — **不是** Play Store 版本 |
 | **架构** | 仅限 `aarch64` (ARM64) |
-| **可用空间** | 安装时峰值约 800 MB（稳态约 700 MB） |
+| **可用空间** | 约 800 MB |
 | **网络** | 安装和更新时需要 |
-| **软件包** | `curl`、`tar`、`unzip`、`node`、`npm`、`file` — 缺失时自动安装 |
+| **Node.js** | 缺失时脚本会自动安装 |
 | **Root** | ❌ **不需要** |
 
 ---
@@ -137,10 +137,10 @@ claude /login
 | `$PREFIX/bin/claude-fix` | 从模板恢复启动器 |
 | `$PREFIX/bin/claude-update` | 更新到最新的 npm 版本 |
 | `$PREFIX/bin/claude-uninstall` | 删除所有内容 |
-| `$PREFIX/lib/claude-musl/` | 修补过的 musl 加载器 + 库 |
-| `$PREFIX/lib/claude-musl/launcher.template` | `claude-fix` 的真相之源 |
+| `$PREFIX/lib/claude-musl/` | **已修补 musl** 加载器 + libc + headers |
+| `$PREFIX/lib/claude-musl/launcher.template` | `claude-fix` 的真实来源 |
 | `$PREFIX/lib/node_modules/@anthropic-ai/claude-code-linux-arm64-musl/claude` | 官方 280 MB 二进制文件 |
-| `$PREFIX/etc/resolv.conf` | musl 的 DNS 配置（缺失时创建） |
+| `$PREFIX/etc/resolv.conf` | DNS 服务器（如缺失则创建） |
 
 **不会在 `$PREFIX` 之外写入任何内容。**
 
@@ -155,36 +155,37 @@ Claude Code 附带 `linux-arm64-musl` ELF 二进制文件。Termux 运行在 **A
 cannot execute: required file not found
 ````
 
-### 为什么不用上游 musl？
-
-上游 musl 读取 `/etc/resolv.conf` 进行 DNS。在 Termux 中，该文件既不可读也不可写，而 Android 通过 `netd` 系统服务路由 DNS。结果：基于 musl 的程序**无法解析任何内容**，并出现 `EAI_AGAIN` 或 `getaddrinfo ENOTFOUND`。
-
-### 不可行的方法
+**不可行的方法：**
 
 - ❌ **`patchelf`** — 更改 ELF 解释器，但 musl 加载器在 Android 内核上仍会 SIGSEGV。
 - ❌ **`proot` / `chroot`** — 笨重、缓慢，且会破坏 `claude` 的 bash 工具。
 - ❌ **npm 包装器 `claude-code-termux`** — 在 Claude Code ≥ 2.1.x 中已失效。
-- ❌ **上游 musl** — 安装正常，但每次 DNS 查找都失败。
+- ❌ **原生 Alpine musl 加载器** — 执行可行，但 **DNS 会失败**，因为 musl 读取 `/etc/resolv.conf`，这在 Termux 中不可读。
 
-### 可行的方法（本项目）
+**可行的方法（本项目）：**
 
-本安装器附带来自 [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux)（MIT 许可）的**修补过的 musl 运行时**。修补添加了两个改进：
+1. 下载由 [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 构建的 **Alpine musl 运行时** — **已修补**的 musl 加载器：
+   - 设置 `MUSL_ON_TERMUX=1` 时读取 `$PREFIX/etc/resolv.conf` 中的 DNS 配置。
+   - 无 nameserver 时回退到 **`1.1.1.1` → `8.8.8.8` → `127.0.0.1`**。
+   - 解压前经过 **SHA256 校验**。
+2. 从 npm 下载**官方 `linux-arm64-musl` 二进制文件**。
+3. 创建一个 **6 行启动器**，取消设置 `LD_PRELOAD`、设置 `MUSL_ON_TERMUX=1`、使用 `--library-path` 调用已修补加载器，并执行真正的二进制文件。
+4. 确保 `$PREFIX/etc/resolv.conf` 存在，包含合理的公共 DNS 服务器。
 
-1. **`MUSL_ON_TERMUX=1`** — 使加载器首先读取 `$PREFIX/etc/resolv.conf`。
-2. **确定性回退** — 如果未找到名称服务器，则使用 `1.1.1.1`，然后 `8.8.8.8`，然后 `127.0.0.1`。
+就这样。**无需 patchelf、无需 proot、无需 chroot、无 DNS 故障。**
 
-然后安装器：
+### 为什么使用已修补的 musl 加载器？
 
-1. 从 GitHub 发布下载**修补过的 musl 运行时**。
-2. 根据固定的 SHA256 进行**验证**。任何不匹配都会中止安装。
-3. 从 npm 下载**官方 `linux-arm64-musl` 二进制文件**。
-4. 创建一个 **6 行启动器**，它会：
-   - 取消设置 `LD_PRELOAD`。
-   - 设置 `MUSL_ON_TERMUX=1` 使 DNS 工作。
-   - 使用 `--library-path` 调用 musl 加载器。
-   - 执行真正的二进制文件。
+上游 musl 读取 `/etc/resolv.conf`，这在 Termux 内既不可读也不可写。Android 通过 `netd` 系统服务路由 DNS，因此基于 musl 的查询会以 `EAI_AGAIN` 或 `getaddrinfo failed` 失败。
 
-**无需 patchelf、无需 proot、无需 chroot、无魔法。**
+[Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 的已修补加载器增加了：
+
+| 新增项 | 行为 |
+|---|---|
+| `MUSL_ON_TERMUX=1` 环境变量 | 优先读取 `$PREFIX/etc/resolv.conf` |
+| 确定性 DNS 回退 | 无 nameserver 时 → `1.1.1.1` → `8.8.8.8` → `127.0.0.1` |
+
+启动器无条件设置 `MUSL_ON_TERMUX=1`，因此 **DNS 零配置即可工作**。
 
 ---
 
@@ -219,32 +220,29 @@ claude-update
 </details>
 
 <details>
-<summary><b>DNS 错误：`EAI_AGAIN`、`getaddrinfo`、`ENOTFOUND`</b></summary>
+<summary><b>`Error relocating ... libtermux-exec-ld-preload.so`</b></summary>
 
-如果您从 v1.x 升级，您使用的是没有 DNS 修补的上游 musl。强制重新安装以获取修补过的加载器：
+启动器通过 `env -u LD_PRELOAD` 处理此问题。如果看到此错误，说明有人绕过了启动器直接运行二进制文件。请使用 `claude`，而非原始二进制路径。
 
-````bash
-bash install.sh --force
-````
+</details>
 
-验证 `$PREFIX/etc/resolv.conf` 存在：
+<details>
+<summary><b>`EAI_AGAIN`、`getaddrinfo failed` 或 DNS 超时</b></summary>
+
+检查 `$PREFIX/etc/resolv.conf` 是否存在：
 
 ````bash
 cat "$PREFIX/etc/resolv.conf"
 ````
 
-如果为空，重新创建它：
+应至少包含一行 `nameserver`。如缺失，请重建：
 
 ````bash
+mkdir -p "$PREFIX/etc"
 printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$PREFIX/etc/resolv.conf"
 ````
 
-</details>
-
-<details>
-<summary><b>`Error relocating ... libtermux-exec-ld-preload.so`</b></summary>
-
-启动器通过 `env -u LD_PRELOAD` 处理此问题。请使用 `claude`，而非原始二进制路径。
+然后重试 `claude`。
 
 </details>
 
@@ -260,9 +258,13 @@ bash install.sh --force
 </details>
 
 <details>
-<summary><b>安装时 SHA256 不匹配</b></summary>
+<summary><b>安装过程中出现 `SHA256 mismatch`</b></summary>
 
-下载的 musl 运行时与固定的 SHA256 不匹配。**不要绕过此检查**。重新运行安装器；如果问题持续，请提交包含完整错误的 issue。
+下载的 musl 运行时归档已损坏或被篡改。请重试 — 若问题持续，请打开 issue。
+
+````bash
+bash install.sh --force
+````
 
 </details>
 
@@ -283,6 +285,8 @@ claude-uninstall
 bash install.sh --uninstall
 ````
 
+> `claude-uninstall` 包含安全防护，拒绝在 Termux `$PREFIX` 之外运行。
+
 ---
 
 <a id="faq"></a>
@@ -298,7 +302,7 @@ bash install.sh --uninstall
 <details>
 <summary><b>会修改我的 shell 配置吗？</b></summary>
 
-**不会。** 所有命令都是 `$PREFIX/bin` 中的真实可执行文件。
+**不会。** 所有命令都是 `$PREFIX/bin` 中的真实可执行文件，而非 shell 函数。
 
 </details>
 
@@ -310,35 +314,46 @@ bash install.sh --uninstall
 </details>
 
 <details>
-<summary><b>为什么用 musl 而非 glibc？</b></summary>
+<summary><b>能在 Play Store 版本的 Termux 上运行吗？</b></summary>
 
-Anthropic 发布的 `linux-arm64-musl` 版本在提供正确加载器时可以在 Android 上运行。glibc 版本在 Android 上完全无法运行。
-
-</details>
-
-<details>
-<summary><b>为什么用修补过的 musl 而非上游 musl？</b></summary>
-
-上游 musl 读取 `/etc/resolv.conf`，而 Termux 不提供该文件。没有修补，每次 DNS 查找都失败（`EAI_AGAIN`）。来自 [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 的修补加载器添加了两个改进：
-
-1. 当设置 `MUSL_ON_TERMUX=1` 时，它读取 `$PREFIX/etc/resolv.conf`。
-2. 如果未找到名称服务器，则使用 `1.1.1.1 → 8.8.8.8 → 127.0.0.1` 作为回退。
-
-启动器自动设置 `MUSL_ON_TERMUX=1`。
+不能。请使用 [F-Droid](https://f-droid.org/en/packages/com.termux/) 或 [GitHub Releases](https://github.com/termux/termux-app/releases)。
 
 </details>
 
 <details>
-<summary><b>修补过的 musl 运行时安全吗？</b></summary>
+<summary><b>如何更新 Claude Code？</b></summary>
 
-安装器在使用前会根据**固定的 SHA256** 进行验证。任何不匹配都会中止安装。源代码可在 [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 以 MIT 许可证获取。
+````bash
+claude-update
+````
+
+</details>
+
+<details>
+<summary><b>为什么使用已修补的 musl 而不是 Alpine 原生加载器？</b></summary>
+
+Alpine musl 加载器读取 `/etc/resolv.conf`，这在 Termux 中不可访问。[Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 的已修补加载器将 DNS 读取重定向到 `$PREFIX/etc/resolv.conf`，并在未配置 nameserver 时提供确定性回退。**没有它，来自 Claude Code 的网络请求会因 DNS 错误而失败。**
+
+</details>
+
+<details>
+<summary><b>musl 运行时是否经过校验？</b></summary>
+
+是的。安装器从 `Ryovx/Musl-on-Termux` 下载**签名的发布归档**，并在解压前对照**固定的 SHA256** 进行校验。任何不匹配都会中止安装。
+
+</details>
+
+<details>
+<summary><b>如果我已经有自定义的 `resolv.conf` 怎么办？</b></summary>
+
+安装器仅在 `$PREFIX/etc/resolv.conf` 不存在或为空时写入。您现有的配置会被保留。
 
 </details>
 
 <details>
 <summary><b>为什么不直接使用 `proot-distro`？</b></summary>
 
-它很慢，会破坏 `claude` 的 bash 工具，并且需要维护一个完整的根文件系统。
+它很慢，会破坏 `claude` 的 bash 工具，并且需要维护一个完整的根文件系统。本安装器避免了所有这些。
 
 </details>
 
@@ -347,7 +362,12 @@ Anthropic 发布的 `linux-arm64-musl` 版本在提供正确加载器时可以�
 <a id="contributing"></a>
 ## 🤝 贡献
 
-完整指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+完整指南请参阅 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)。
+
+- 🐛 **报告错误** — [提交 issue](https://github.com/Ryovx/Termux-Claude-Code/issues/new)
+- 💡 **建议功能** — [发起讨论](https://github.com/Ryovx/Termux-Claude-Code/discussions)
+- 🔧 **提交 pull request** — Fork、branch、commit、PR
+- 🌐 **添加翻译** — 创建 `README.<lang>.md` 并在顶部链接
 
 ---
 
@@ -356,13 +376,13 @@ Anthropic 发布的 `linux-arm64-musl` 版本在提供正确加载器时可以�
 
 本项目采用 **GNU General Public License v3.0 或更高版本**（SPDX: `GPL-3.0-or-later`）许可。完整文本请参阅 [LICENSE](LICENSE)。
 
-本安装器附带的修补过的 musl 运行时是独立作品，在 **MIT 许可证**下发布。详情请参阅 [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux)。
-
-### 🤝 开放发明网络 (OIN)
+### 🤝 Open Invention Network (OIN)
 
 **Ryovx 是 [Open Invention Network (OIN)](https://openinventionnetwork.com/) 的自豪成员** — 一个保护开源软件免受专利攻击的全球联盟。
 
 根据 OIN 的使命以及我们对 Termux 社区的承诺，**Ryovx 的大多数服务产品均以 GNU GPLv3 发布**。
+
+> 本安装器捆绑的已修补 musl 运行时由 [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) 以 **MIT 许可证**发布。它所基于的 musl 源代码由 musl 项目以 **MIT 许可证**发布。
 
 ### 💚 道德请求 — 非法律限制
 
