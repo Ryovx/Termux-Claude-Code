@@ -8,11 +8,17 @@ body:
       value: |
         Thanks for your suggestion! 💡
 
+        Before submitting, please make sure you:
+
+        1. **Searched existing issues and discussions** for similar ideas.
+        2. **Confirmed the feature fits this project's scope** (Termux + Claude Code installer).
+        3. **Considered whether it belongs in [Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) instead** (for runtime/DNS-loader changes).
+
   - type: textarea
     id: problem
     attributes:
       label: Problem Statement
-      description: "What problem does this feature solve?"
+      description: "What problem does this feature solve? Be specific about the Termux/Claude Code use case."
       placeholder: "I'm always frustrated when..."
     validations:
       required: true
@@ -21,7 +27,7 @@ body:
     id: solution
     attributes:
       label: Proposed Solution
-      description: "Describe what you'd like to happen"
+      description: "Describe what you'd like to happen. If it involves code changes, a rough sketch helps."
     validations:
       required: true
 
@@ -33,11 +39,30 @@ body:
     validations:
       required: false
 
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area does this affect?
+      options:
+        - "Installer (install.sh)"
+        - "Launcher (claude)"
+        - "Update (claude-update)"
+        - "Fix (claude-fix)"
+        - "Uninstall (claude-uninstall)"
+        - "Documentation"
+        - "Translations (ar / zh / other)"
+        - "DNS / resolv.conf handling"
+        - "Patched musl runtime (redirect to Musl-on-Termux)"
+        - "CI / GitHub Actions"
+        - "Other"
+    validations:
+      required: true
+
   - type: textarea
     id: context
     attributes:
       label: Additional Context
-      description: "Screenshots, links, references, etc."
+      description: "Screenshots, links, references, device info, etc."
     validations:
       required: false
 
@@ -50,3 +75,5 @@ body:
           required: true
         - label: This feature fits the project's scope (Termux + Claude Code)
           required: true
+        - label: If this is about the musl runtime itself, I understand it should be filed at Ryovx/Musl-on-Termux
+          required: false
