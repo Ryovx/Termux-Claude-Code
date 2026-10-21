@@ -54,7 +54,7 @@ body:
   - type: textarea
     id: doctor-output
     attributes:
-      label: `claude doctor` Output
+      label: claude doctor Output
       description: "Paste the full output (do not paraphrase)"
       render: shell
     validations:
