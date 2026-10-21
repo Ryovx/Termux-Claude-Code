@@ -7,22 +7,20 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report a bug! 🙏
-        Please fill out this form as completely as possible.
+
+        Before submitting, please make sure you:
+
+        1. **Searched existing issues** to avoid duplicates.
+        2. **Ran `claude doctor`** and will paste the full output below.
+        3. **Checked `$PREFIX/etc/resolv.conf`** if the issue involves network/DNS.
+        4. **Are using Termux from F-Droid or GitHub Releases** (not Play Store).
 
   - type: input
-    id: termux-version
+    id: installer-version
     attributes:
-      label: Termux Version
-      description: "Output of `termux-info`"
-      placeholder: "e.g., 0.118.0"
-    validations:
-      required: true
-
-  - type: input
-    id: android-version
-    attributes:
-      label: Android Version & Device
-      description: "e.g., Android 14, Pixel 8"
+      label: Installer Version
+      description: "Output of `bash install.sh --version` or the vX.Y.Z in the header"
+      placeholder: "e.g., 2.0.0"
     validations:
       required: true
 
@@ -35,12 +33,54 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: termux-version
+    attributes:
+      label: Termux Version
+      description: "Output of `termux-info` (first line is enough)"
+      placeholder: "e.g., 0.118.0"
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android Version & Device
+      description: "e.g., Android 14, Pixel 8, aarch64"
+      placeholder: "Android 14, Pixel 8, aarch64"
+    validations:
+      required: true
+
   - type: textarea
     id: doctor-output
     attributes:
-      label: claude doctor Output
-      description: "Paste the full output"
+      label: `claude doctor` Output
+      description: "Paste the full output (do not paraphrase)"
       render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: resolv-conf
+    attributes:
+      label: Contents of `$PREFIX/etc/resolv.conf`
+      description: "Output of `cat \"$PREFIX/etc/resolv.conf\"` — needed if DNS/network is involved"
+      render: shell
+      placeholder: |
+        nameserver 1.1.1.1
+        nameserver 8.8.8.8
+    validations:
+      required: false
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How did you install?
+      options:
+        - "One-command installer (curl | bash)"
+        - "Downloaded install.sh manually"
+        - "Re-ran with --force"
+        - "Other (explain below)"
     validations:
       required: true
 
@@ -50,7 +90,8 @@ body:
       label: Steps to Reproduce
       placeholder: |
         1. Run `claude`
-        2. See error
+        2. See error X
+        3. ...
     validations:
       required: true
 
@@ -72,7 +113,7 @@ body:
     id: logs
     attributes:
       label: Relevant Logs
-      description: "Copy-paste error messages, debug output, etc."
+      description: "Copy-paste terminal output, errors, stack traces, or `MUSL_ON_TERMUX=1` debug output"
       render: shell
     validations:
       required: false
@@ -87,4 +128,8 @@ body:
         - label: I am using Termux from F-Droid or GitHub Releases (not Play Store)
           required: true
         - label: I am on an aarch64 (ARM64) device
+          required: true
+        - label: I ran `claude doctor` and pasted the full output above
+          required: true
+        - label: This is NOT a security vulnerability (those go via GitHub Security Advisories)
           required: true
