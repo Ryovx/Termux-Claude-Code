@@ -11,6 +11,7 @@ Before opening an issue, please:
 1. **Search existing issues** to avoid duplicates.
 2. **Run `claude doctor`** and include the output.
 3. **Include your Termux version**, Android version, and device model.
+4. **If DNS is involved**, include `$PREFIX/etc/resolv.conf`.
 
 Open an issue at: [https://github.com/Ryovx/Termux-Claude-Code/issues/new](https://github.com/Ryovx/Termux-Claude-Code/issues/new)
 
@@ -22,19 +23,30 @@ Start a discussion at: [https://github.com/Ryovx/Termux-Claude-Code/discussions]
 
 1. **Fork** the repository.
 2. **Create a branch** from `main`:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+
+````bash
+git checkout -b feature/your-feature-name
+````
+
 3. **Make your changes.**
-4. **Test on a clean Termux install.**
+4. **Test on a clean Termux install** — including DNS resolution:
+
+````bash
+claude -p "say hello"
+````
+
 5. **Run syntax check:**
-   ```bash
-   bash -n install.sh
-   ```
+
+````bash
+bash -n install.sh
+````
+
 6. **Commit** with a clear message:
-   ```bash
-   git commit -m "feat: add support for X"
-   ```
+
+````bash
+git commit -m "feat: add support for X"
+````
+
 7. **Push** and open a **Pull Request**.
 
 ## Development Guidelines
@@ -42,6 +54,10 @@ Start a discussion at: [https://github.com/Ryovx/Termux-Claude-Code/discussions]
 - Keep the installer **idempotent** — running it twice must produce the same result.
 - Keep it **safe** — never modify files outside `$PREFIX`.
 - Never modify `~/.bashrc` or `~/.zshrc`.
+- Never bypass the **SHA256 verification** of the musl runtime.
+- Never install a musl loader that isn't from `Ryovx/Musl-on-Termux`.
+- Always preserve an existing `$PREFIX/etc/resolv.conf`.
+- Test DNS resolution after installation — not just `claude --version`.
 - Test on a clean Termux install before submitting.
 - Verify with `bash -n install.sh` before every commit.
 - Follow the existing code style (2-space indent, no tabs).
@@ -62,13 +78,13 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Translations
 
-Want to add a translation? Create a file named `README.<lang>.md` and link it at the top of the existing READMEs.
+Want to add a translation? Create a file named `README.<lang>.md` and link it at the top of the existing READMEs. Do the same for `CONTRIBUTING.<lang>.md`, `SECURITY.<lang>.md`, `SUPPORT.<lang>.md`, and `CODE_OF_CONDUCT.<lang>.md`.
 
 Currently supported:
 
-- 🇬🇧 English (`README.md`)
-- 🇸🇦 Arabic (`README.ar.md`)
-- 🇨🇳 Chinese (`README.zh.md`)
+- 🇬🇧 English (`README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`)
+- 🇸🇦 Arabic (`README.ar.md`, `CONTRIBUTING.ar.md`, `SECURITY.ar.md`, `SUPPORT.ar.md`, `CODE_OF_CONDUCT.ar.md`)
+- 🇨🇳 Chinese (`README.zh.md`, `CONTRIBUTING.zh.md`, `SECURITY.zh.md`, `SUPPORT.zh.md`, `CODE_OF_CONDUCT.zh.md`)
 
 ## Code of Conduct
 
