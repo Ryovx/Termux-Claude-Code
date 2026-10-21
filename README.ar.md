@@ -11,8 +11,8 @@
 [![الترخيص: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge&logo=gnu&logoColor=white)](https://www.gnu.org/licenses/gpl-3.0)
 [![المنصة: Termux](https://img.shields.io/badge/Platform-Termux-black?style=for-the-badge&logo=android&logoColor=white)](#requirements)
 [![المعمارية: aarch64](https://img.shields.io/badge/Architecture-aarch64-orange?style=for-the-badge&logo=arm&logoColor=white)](#requirements)
+[![الإصدار: 2.0.0](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=for-the-badge&logo=github)](#what-gets-installed)
 
-[![الإصدار](https://img.shields.io/github/v/release/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&label=Version&color=brightgreen)](https://github.com/Ryovx/Termux-Claude-Code/releases)
 [![النجوم](https://img.shields.io/github/stars/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=yellow)](https://github.com/Ryovx/Termux-Claude-Code/stargazers)
 [![التفرعات](https://img.shields.io/github/forks/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=blue)](https://github.com/Ryovx/Termux-Claude-Code/network/members)
 
@@ -50,13 +50,13 @@
 - 🚀 **تشغيل أصلي** — يشغّل الملف الثنائي `linux-arm64-musl` *الرسمي* المنشور من Anthropic.
 - 🛡️ **بدون proot، بدون chroot** — لا حاويات، لا أجهزة افتراضية، لا محاكاة.
 - 🔧 **بدون patchelf** — يتجنب عمدًا خطأ SIGSEGV الذي يحدث عند تعديل ملفات musl الثنائية على نواة Android.
-- 🌐 **DNS يعمل مباشرة** — يشحن محمّل musl معدّلًا يقرأ `$PREFIX/etc/resolv.conf` ويعود إلى DNS عام عند الحاجة.
-- 🔐 **تحقق من سلسلة التوريد** — يُنزَّل محمّل musl من إصدار GitHub موقّع ويُتحقق من SHA256 قبل التثبيت.
+- 🌐 **DNS يعمل مباشرةً** — يستخدم **محمّل musl معدّل** ([Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux)) يقرأ `$PREFIX/etc/resolv.conf` ويرجع إلى خوادم DNS عامة محددة كخيار احتياطي.
 - ⚡ **تثبيت بأمر واحد** — انسخ، الصق، انتهى.
 - 🔄 **تحديثات ذكية** — `claude-update` يتخطى تنزيل 280 ميجابايت إذا كنت على أحدث إصدار.
 - 💚 **إصلاح ذاتي** — `claude-fix` يستعيد المشغّل بعد `npm update` يدوي.
 - 🧹 **إلغاء تثبيت نظيف** — `claude-uninstall` يزيل كل شيء.
 - 🚫 **صفر تعديل على ملفات rc** — لا يلمس `~/.bashrc` أو `~/.zshrc`.
+- 🔐 **متحقق بـ SHA256** — يتم التحقق من سلامة بيئة musl قبل الاستخدام.
 
 ---
 
@@ -92,9 +92,9 @@ claude
 |---|---|
 | **Termux** | من [F-Droid](https://f-droid.org/en/packages/com.termux/) أو [GitHub Releases](https://github.com/termux/termux-app/releases) — **ليس** نسخة Play Store |
 | **المعمارية** | `aarch64` (ARM64) فقط |
-| **مساحة فارغة** | ~800 ميجابايت أثناء التثبيت (~700 ميجابايت في الحالة المستقرة) |
+| **مساحة فارغة** | ~800 ميجابايت |
 | **الإنترنت** | مطلوب أثناء التثبيت والتحديث |
-| **الحزم** | `curl`، `tar`، `unzip`، `node`، `npm`، `file` — تُثبّت تلقائيًا إذا كانت مفقودة |
+| **Node.js** | يُثبّت تلقائيًا إذا كان مفقودًا |
 | **Root** | ❌ **غير مطلوب** |
 
 ---
@@ -137,10 +137,10 @@ claude /login
 | `$PREFIX/bin/claude-fix` | يستعيد المشغّل من القالب |
 | `$PREFIX/bin/claude-update` | يحدّث إلى أحدث إصدار npm |
 | `$PREFIX/bin/claude-uninstall` | يزيل كل شيء |
-| `$PREFIX/lib/claude-musl/` | محمّل musl المعدّل + المكتبات |
+| `$PREFIX/lib/claude-musl/` | محمّل **musl معدّل** + libc + headers |
 | `$PREFIX/lib/claude-musl/launcher.template` | مصدر الحقيقة لـ `claude-fix` |
 | `$PREFIX/lib/node_modules/@anthropic-ai/claude-code-linux-arm64-musl/claude` | الملف الثنائي الرسمي 280 ميجابايت |
-| `$PREFIX/etc/resolv.conf` | إعدادات DNS لـ musl (يُنشأ إذا كان مفقودًا) |
+| `$PREFIX/etc/resolv.conf` | خوادم DNS (يُنشأ إذا كان مفقودًا) |
 
 **لا شيء يُكتب خارج `$PREFIX`.**
 
@@ -155,36 +155,37 @@ Claude Code يشحن ملفًا ثنائيًا `linux-arm64-musl`. Termux يعم
 cannot execute: required file not found
 ````
 
-### لماذا ليس musl الأصلي؟
-
-musl الأصلي يقرأ `/etc/resolv.conf` لـ DNS. داخل Termux، هذا الملف غير قابل للقراءة أو الكتابة، و Android يوجه DNS عبر خدمة `netd`. النتيجة: برامج musl لا تحلّ أي شيء وتفشل بـ `EAI_AGAIN` أو `getaddrinfo ENOTFOUND`.
-
-### ما لا يعمل
+**ما لا يعمل:**
 
 - ❌ **`patchelf`** — يغيّر مفسّر ELF، لكن محمّل musl لا يزال يسبب SIGSEGV على نواة Android.
 - ❌ **`proot` / `chroot`** — ثقيل، بطيء، ويكسر أداة bash في `claude`.
 - ❌ **غلاف npm `claude-code-termux`** — معطوب مع Claude Code ≥ 2.1.x.
-- ❌ **musl الأصلي** — يثبت بنجاح، لكن كل استعلام DNS يفشل.
+- ❌ **محمّل Alpine musl الافتراضي** — يعمل للتنفيذ، لكن **DNS يفشل** لأن musl يقرأ `/etc/resolv.conf`، وهو غير قابل للقراءة في Termux.
 
-### ما يعمل (هذا المشروع)
+**ما يعمل (هذا المشروع):**
 
-يشحن هذا المثبّت **بيئة musl معدّلة** من [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) (مرخصة MIT). التعديل يضيف شيئين:
+1. تنزيل **بيئة musl من Alpine** مبنية بواسطة [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) — محمّل musl **معدّل** يقوم بـ:
+   - قراءة إعدادات DNS من `$PREFIX/etc/resolv.conf` عند تعيين `MUSL_ON_TERMUX=1`.
+   - الرجوع إلى **`1.1.1.1` → `8.8.8.8` → `127.0.0.1`** عندما لا يوجد nameserver.
+   - **متحقق منه بـ SHA256** قبل الاستخراج.
+2. تنزيل **الملف الثنائي `linux-arm64-musl` الرسمي** من npm.
+3. إنشاء **مشغّل من 6 أسطر** يزيل `LD_PRELOAD`، ويعيّن `MUSL_ON_TERMUX=1`، ويستدعي المحمّل المعدّل مع `--library-path`، وينفّذ الملف الثنائي الحقيقي.
+4. التأكد من وجود `$PREFIX/etc/resolv.conf` بخوادم DNS عامة معقولة.
 
-1. **`MUSL_ON_TERMUX=1`** — يجعل المحمّل يقرأ `$PREFIX/etc/resolv.conf` أولًا.
-2. **احتياطي حتمي** — إذا لم يُوجد nameserver، استخدم `1.1.1.1`، ثم `8.8.8.8`، ثم `127.0.0.1`.
+هذا كل شيء. **بدون patchelf، بدون proot، بدون chroot، بدون أعطال DNS.**
 
-ثم يقوم المثبّت بـ:
+### لماذا محمّل musl معدّل؟
 
-1. تنزيل **بيئة musl المعدّلة** من إصدار GitHub.
-2. **التحقق من SHA256** مقابل ثابت مثبّت. يُلغى التثبيت عند أي عدم تطابق.
-3. تنزيل **الملف الثنائي `linux-arm64-musl` الرسمي** من npm.
-4. إنشاء **مشغّل من 6 أسطر**:
-   - يزيل `LD_PRELOAD`.
-   - يضبط `MUSL_ON_TERMUX=1` حتى يعمل DNS.
-   - يستدعي محمّل musl مع `--library-path`.
-   - ينفّذ الملف الثنائي الحقيقي.
+musl الأصلي يقرأ `/etc/resolv.conf`، وهو غير قابل للقراءة ولا للكتابة داخل Termux. Android يوجه DNS عبر خدمة `netd`، لذلك تفشل استعلامات musl بـ `EAI_AGAIN` أو `getaddrinfo failed`.
 
-**بدون patchelf، بدون proot، بدون chroot، بدون سحر.**
+المحمّل المعدّل من [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) يضيف:
+
+| الإضافة | السلوك |
+|---|---|
+| متغير `MUSL_ON_TERMUX=1` | قراءة `$PREFIX/etc/resolv.conf` أولاً |
+| رجوع DNS حتمي | إذا لم يوجد nameserver → `1.1.1.1` → `8.8.8.8` → `127.0.0.1` |
+
+المشغّل يعيّن `MUSL_ON_TERMUX=1` تلقائيًا، لذا **يعمل DNS بدون أي إعداد يدوي**.
 
 ---
 
@@ -219,13 +220,14 @@ claude-update
 </details>
 
 <details>
-<summary><b>أخطاء DNS: `EAI_AGAIN`، `getaddrinfo`، `ENOTFOUND`</b></summary>
+<summary><b>`Error relocating ... libtermux-exec-ld-preload.so`</b></summary>
 
-إذا كنت قد رقّيت من v1.x، كنت تستخدم musl الأصلي بدون تعديل DNS. أعد التثبيت النظيف للحصول على المحمّل المعدّل:
+المشغّل يتعامل مع هذا عبر `env -u LD_PRELOAD`. إذا رأيت هذا، فهذا يعني أن أحدًا تجاوز المشغّل وشغّل الملف الثنائي مباشرة. استخدم `claude` وليس المسار المباشر.
 
-````bash
-bash install.sh --force
-````
+</details>
+
+<details>
+<summary><b>`EAI_AGAIN` أو `getaddrinfo failed` أو انتهاء مهلة DNS</b></summary>
 
 تحقق من وجود `$PREFIX/etc/resolv.conf`:
 
@@ -233,23 +235,19 @@ bash install.sh --force
 cat "$PREFIX/etc/resolv.conf"
 ````
 
-إذا كان فارغًا، أعد إنشاءه:
+يجب أن يحتوي على سطر `nameserver` واحد على الأقل. إذا كان مفقودًا، أعد إنشاءه:
 
 ````bash
+mkdir -p "$PREFIX/etc"
 printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$PREFIX/etc/resolv.conf"
 ````
 
-</details>
-
-<details>
-<summary><b>`Error relocating ... libtermux-exec-ld-preload.so`</b></summary>
-
-المشغّل يتعامل مع هذا عبر `env -u LD_PRELOAD`. استخدم `claude` وليس المسار المباشر.
+ثم أعد محاولة `claude`.
 
 </details>
 
 <details>
-<summary><b>Segmentation fault (SIGSEGV)</b></summary>
+<summary><b>`Segmentation fault` (SIGSEGV)</b></summary>
 
 من المحتمل أنك تشغّل ملفًا ثنائيًا معدّلًا بـ `patchelf` من تثبيت قديم. أعد التثبيت النظيف:
 
@@ -260,9 +258,13 @@ bash install.sh --force
 </details>
 
 <details>
-<summary><b>عدم تطابق SHA256 أثناء التثبيت</b></summary>
+<summary><b>`SHA256 mismatch` أثناء التثبيت</b></summary>
 
-الملف الذي تم تنزيله لا يطابق SHA256 المثبّت. **لا تتجاوز هذا الفحص**. أعد تشغيل المثبّت؛ إذا استمر، افتح issue مع الخطأ الكامل.
+أرشيف musl الذي تم تنزيله تالف أو تم العبث به. أعد المحاولة — إذا استمر، افتح issue.
+
+````bash
+bash install.sh --force
+````
 
 </details>
 
@@ -283,6 +285,8 @@ claude-uninstall
 bash install.sh --uninstall
 ````
 
+> `claude-uninstall` يتضمن حماية أمنية ترفض العمل خارج `$PREFIX` الخاص بـ Termux.
+
 ---
 
 <a id="faq"></a>
@@ -298,7 +302,7 @@ bash install.sh --uninstall
 <details>
 <summary><b>هل يعدّل إعدادات shell الخاصة بي؟</b></summary>
 
-**لا.** جميع الأوامر ملفات تنفيذية حقيقية في `$PREFIX/bin`.
+**لا.** جميع الأوامر ملفات تنفيذية حقيقية في `$PREFIX/bin`، وليست دوال shell.
 
 </details>
 
@@ -310,35 +314,46 @@ bash install.sh --uninstall
 </details>
 
 <details>
-<summary><b>لماذا musl وليس glibc؟</b></summary>
+<summary><b>هل يعمل مع نسخة Play Store من Termux؟</b></summary>
 
-Anthropic تنشر بناء `linux-arm64-musl` يعمل على Android عند توفير المحمّل الصحيح. بناء glibc لا يعمل على Android إطلاقًا.
-
-</details>
-
-<details>
-<summary><b>لماذا musl معدّل وليس musl الأصلي؟</b></summary>
-
-musl الأصلي يقرأ `/etc/resolv.conf`، وهو غير متوفر في Termux. بدون تعديل، كل استعلام DNS يفشل (`EAI_AGAIN`). المحمّل المعدّل من [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) يضيف تحسينين:
-
-1. عند ضبط `MUSL_ON_TERMUX=1`، يقرأ `$PREFIX/etc/resolv.conf`.
-2. إذا لم يُعثر على nameserver، يستخدم `1.1.1.1 → 8.8.8.8 → 127.0.0.1` كاحتياطي.
-
-المشغّل يضبط `MUSL_ON_TERMUX=1` تلقائيًا.
+لا. استخدم [F-Droid](https://f-droid.org/en/packages/com.termux/) أو [GitHub Releases](https://github.com/termux/termux-app/releases).
 
 </details>
 
 <details>
-<summary><b>هل بيئة musl المعدّلة آمنة؟</b></summary>
+<summary><b>كيف أحدّث Claude Code؟</b></summary>
 
-يتحقق المثبّت من SHA256 **مثبّت مسبقًا** قبل الاستخدام. أي عدم تطابق يلغي التثبيت. المصدر متاح على [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) تحت رخصة MIT.
+````bash
+claude-update
+````
+
+</details>
+
+<details>
+<summary><b>لماذا استخدام musl معدّل بدل محمّل Alpine الافتراضي؟</b></summary>
+
+محمّل Alpine musl يقرأ `/etc/resolv.conf`، وهو غير متاح في Termux. المحمّل المعدّل من [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) يعيد توجيه قراءات DNS إلى `$PREFIX/etc/resolv.conf` ويوفر رجوعًا حتميًا عندما لا يوجد nameserver. **بدونه، تفشل طلبات الشبكة من Claude Code بأخطاء DNS.**
+
+</details>
+
+<details>
+<summary><b>هل يتم التحقق من بيئة musl؟</b></summary>
+
+نعم. المثبّت ينزّل **أرشيف إصدار موقّع** من `Ryovx/Musl-on-Termux` ويتحقق منه مقابل **SHA256 مثبت** قبل الاستخراج. يُلغى التثبيت عند أي عدم تطابق.
+
+</details>
+
+<details>
+<summary><b>ماذا لو كان لدي `resolv.conf` مخصص؟</b></summary>
+
+المثبّت يكتب `$PREFIX/etc/resolv.conf` فقط إذا كان غير موجود أو فارغ. يتم الحفاظ على إعداداتك الحالية.
 
 </details>
 
 <details>
 <summary><b>لماذا لا أستخدم `proot-distro` فقط؟</b></summary>
 
-إنه بطيء، ويكسر أداة bash في `claude`، ويتطلب نظام ملفات جذري كامل.
+إنه بطيء، ويكسر أداة bash في `claude`، ويتطلب الاحتفاظ بنظام ملفات جذري كامل. هذا المثبّت يتجنب كل ذلك.
 
 </details>
 
@@ -347,7 +362,12 @@ musl الأصلي يقرأ `/etc/resolv.conf`، وهو غير متوفر في Te
 <a id="contributing"></a>
 ## 🤝 المساهمة
 
-راجع [CONTRIBUTING.md](CONTRIBUTING.md) للحصول على الإرشادات الكاملة.
+راجع [CONTRIBUTING.ar.md](CONTRIBUTING.ar.md) للحصول على الإرشادات الكاملة.
+
+- 🐛 **الإبلاغ عن الأخطاء** — [افتح issue](https://github.com/Ryovx/Termux-Claude-Code/issues/new)
+- 💡 **اقتراح ميزات** — [ابدأ نقاشًا](https://github.com/Ryovx/Termux-Claude-Code/discussions)
+- 🔧 **إرسال pull requests** — Fork, branch, commit, PR
+- 🌐 **إضافة ترجمات** — أنشئ `README.<lang>.md` واربطه في الأعلى
 
 ---
 
@@ -356,13 +376,13 @@ musl الأصلي يقرأ `/etc/resolv.conf`، وهو غير متوفر في Te
 
 هذا المشروع مرخّص تحت **GNU General Public License v3.0 أو أحدث** (SPDX: `GPL-3.0-or-later`). راجع [LICENSE](LICENSE) للنص الكامل.
 
-بيئة musl المعدّلة التي يشحنها هذا المثبّت عمل منفصل، مرخّص تحت **رخصة MIT**. راجع [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) للتفاصيل.
-
-### 🤝 شبكة الاختراعات المفتوحة (OIN)
+### 🤝 Open Invention Network (OIN)
 
 **Ryovx عضو فخور في [Open Invention Network (OIN)](https://openinventionnetwork.com/)** — تحالف عالمي يحمي البرمجيات مفتوحة المصدر من الاعتداءات على براءات الاختراع.
 
 تماشيًا مع مهمة OIN والتزامنا بمجتمع Termux، **تُصدر معظم منتجات Ryovx الخدمية تحت GNU GPLv3**.
+
+> بيئة musl المعدّلة التي يحزمها هذا المثبّت موزعة تحت **ترخيص MIT** بواسطة [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux). مصادر musl التي تستند إليها مُصدرة تحت **ترخيص MIT** بواسطة مشروع musl.
 
 ### 💚 طلب أخلاقي — ليس قيدًا قانونيًا
 
