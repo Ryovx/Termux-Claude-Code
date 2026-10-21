@@ -11,11 +11,11 @@
 [![الترخيص: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge&logo=gnu&logoColor=white)](https://www.gnu.org/licenses/gpl-3.0)
 [![المنصة: Termux](https://img.shields.io/badge/Platform-Termux-black?style=for-the-badge&logo=android&logoColor=white)](#requirements)
 [![المعمارية: aarch64](https://img.shields.io/badge/Architecture-aarch64-orange?style=for-the-badge&logo=arm&logoColor=white)](#requirements)
-[![الإصدار: 2.0.0](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=for-the-badge&logo=github)](#what-gets-installed)
 
+[![النسخة](https://img.shields.io/github/v/release/Ryovx/Termux-Claude-Code?sort=semver&style=for-the-badge&logo=github&label=Version&color=brightgreen)](https://github.com/Ryovx/Termux-Claude-Code/releases/latest)
 [![النجوم](https://img.shields.io/github/stars/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=yellow)](https://github.com/Ryovx/Termux-Claude-Code/stargazers)
 [![التفرعات](https://img.shields.io/github/forks/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=blue)](https://github.com/Ryovx/Termux-Claude-Code/network/members)
-
+[![مشاكل](https://img.shields.io/github/issues/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=red)](https://github.com/Ryovx/Termux-Claude-Code/issues)
 <br/>
 
 **المثبّت الأصلي المفقود الذي يتيح تشغيل [Claude Code](https://claude.com/claude-code) على [Termux](https://termux.dev) — بدون `proot`، بدون `chroot`، بدون `patchelf`، بدون حاويات.**
