@@ -15,6 +15,7 @@ Before asking for help, please:
 | [GitHub Issues](https://github.com/Ryovx/Termux-Claude-Code/issues) | Bug reports, reproducible problems |
 | [GitHub Discussions](https://github.com/Ryovx/Termux-Claude-Code/discussions) | Questions, ideas, general help |
 | [Anthropic Docs](https://docs.anthropic.com/en/docs/claude-code) | Claude Code itself (not this installer) |
+| [Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) | The patched musl runtime |
 
 ## What to Include
 
@@ -24,6 +25,7 @@ When asking for help, please include:
 - **Android version** and **device model**
 - **Output of `claude doctor`**
 - **Output of `claude --version`**
+- **Contents of `$PREFIX/etc/resolv.conf`** if DNS is involved
 - **Exact error message** (copy-paste, don't paraphrase)
 - **Steps to reproduce**
 
@@ -33,6 +35,7 @@ When asking for help, please include:
 - **Termux package issues** — report to [Termux](https://github.com/termux/termux-app/issues)
 - **Non-aarch64 devices** — this installer only supports ARM64
 - **Play Store Termux** — use F-Droid or GitHub Releases
+- **The patched musl runtime itself** — report to [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux/issues)
 
 ## Response Time
 
