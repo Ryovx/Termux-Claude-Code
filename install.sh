@@ -29,9 +29,10 @@
 #   Termux Claude Code Installer Script
 #   ─────────────────────────────────────────────────────────────────────
 #   Developed & Maintained by / Ryovx
-#   Version:      1.0.0
+#   Version:      2.0.0
 #   License:      GNU General Public License v3.0 or later
 #   Source:       Real Claude Code linux-arm64-musl binary from Anthropic
+#   musl source:  https://github.com/Ryovx/Musl-on-Termux (patched, MIT)
 #
 # ═══════════════════════════════════════════════════════════════════════════
 #
@@ -97,12 +98,17 @@
 #     • The official @anthropic-ai/claude-code-linux-arm64-musl ELF
 #       binary, fetched directly from npm.
 #
-#     • Alpine's musl dynamic loader (ld-musl-aarch64.so.1) and its
-#       bundled shared libraries, installed under
-#       $PREFIX/lib/claude-musl/.
+#     • A PATCHED musl dynamic loader (ld-musl-aarch64.so.1) built
+#       from https://github.com/Ryovx/Musl-on-Termux, downloaded as
+#       a signed release zip and verified against a pinned SHA256.
+#       The patched loader reads $PREFIX/etc/resolv.conf when the
+#       MUSL_ON_TERMUX=1 environment variable is set, and falls back
+#       to a deterministic DNS resolver list when no nameserver is
+#       configured.
 #
 #     • A small launcher at $PREFIX/bin/claude that re-executes the
-#       binary with the correct loader and with LD_PRELOAD unset.
+#       binary with the correct loader, with LD_PRELOAD unset, and
+#       with MUSL_ON_TERMUX=1 (so DNS works out of the box).
 #
 #     • Three standalone helper scripts in $PREFIX/bin/:
 #         claude-fix        restores the launcher from its template
@@ -126,6 +132,21 @@
 #   uses no patchelf. Instead it supplies the missing loader and
 #   preloads it explicitly via the launcher.
 #
+#   WHY PATCHED MUSL
+#   ─────────────────────────────────────────────────────────────────────
+#   Upstream musl reads /etc/resolv.conf, which is neither readable
+#   nor writable inside Termux. Android routes DNS through the netd
+#   system service, so musl-based lookups fail with EAI_AGAIN.
+#
+#   The patched loader from Ryovx/Musl-on-Termux adds:
+#
+#     • MUSL_ON_TERMUX=1  →  read $PREFIX/etc/resolv.conf first.
+#     • Deterministic DNS fallback when no nameserver is found:
+#         1.1.1.1  →  8.8.8.8  →  127.0.0.1
+#
+#   The launcher sets MUSL_ON_TERMUX=1 unconditionally, so DNS works
+#   without any manual environment configuration by the user.
+#
 #   SKIP-IF-LATEST
 #   ─────────────────────────────────────────────────────────────────────
 #   When re-run, the installer compares the version in npm against
@@ -137,7 +158,7 @@
 #
 #   INSTALLED ARTIFACTS
 #   ─────────────────────────────────────────────────────────────────────
-#     $PREFIX/lib/claude-musl/                   musl loader + libs
+#     $PREFIX/lib/claude-musl/                   patched musl loader + libs
 #     $PREFIX/lib/claude-musl/launcher.template  launcher source of truth
 #     $PREFIX/lib/node_modules/@anthropic-ai/
 #         claude-code-linux-arm64-musl/claude    official binary
@@ -145,13 +166,14 @@
 #     $PREFIX/bin/claude-fix                     launcher restorer
 #     $PREFIX/bin/claude-update                  npm update wrapper
 #     $PREFIX/bin/claude-uninstall               full uninstaller
+#     $PREFIX/etc/resolv.conf                    (created if missing)
 #
 # ═══════════════════════════════════════════════════════════════════════════
 
 set -Eeuo pipefail
 
 readonly SCRIPT_NAME="Termux Claude Code Installer Script"
-readonly SCRIPT_VERSION="1.0.0"
+readonly SCRIPT_VERSION="2.0.0"
 readonly SCRIPT_AUTHOR="Ryovx"
 
 readonly PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
@@ -159,6 +181,7 @@ readonly HOME_DIR="${HOME:-/data/data/com.termux/files/home}"
 
 readonly MUSL_RUNTIME_DIR="$PREFIX/lib/claude-musl"
 readonly MUSL_LOADER="$MUSL_RUNTIME_DIR/ld-musl-aarch64.so.1"
+readonly MUSL_RESOLV_CONF="$PREFIX/etc/resolv.conf"
 
 readonly NODE_MODULES_DIR="$PREFIX/lib/node_modules"
 readonly ANTHROPIC_DIR="$NODE_MODULES_DIR/@anthropic-ai"
@@ -173,13 +196,27 @@ readonly CLAUDE_FIX_PATH="$PREFIX/bin/claude-fix"
 readonly CLAUDE_UPDATE_PATH="$PREFIX/bin/claude-update"
 readonly CLAUDE_UNINSTALL_PATH="$PREFIX/bin/claude-uninstall"
 
-readonly ALPINE_VERSION="3.20.3"
-readonly ALPINE_URL="https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-${ALPINE_VERSION}-aarch64.tar.gz"
+# ─── Patched musl release ────────────────────────────────────────────────
+# The archive is produced by https://github.com/Ryovx/Musl-on-Termux.
+# It contains:
+#   ld-musl-aarch64.so.1   (patched loader; also serves as libc.so)
+#   lib/                   (static archives + crt objects)
+#   include/               (public musl headers)
+#
+# The pinned SHA256 below MUST match the published release asset.
+# If the release is ever re-uploaded, update this constant and bump
+# SCRIPT_VERSION. Verification is mandatory — the installer refuses
+# to proceed on any mismatch.
+readonly MUSL_ZIP_URL="https://github.com/Ryovx/Musl-on-Termux/releases/download/v1.2.6-termux/musl-on-termux-aarch64.zip"
+readonly MUSL_ZIP_SHA256="e4f456187a54f6fbbcda31026354728262b5acfce11642eaca2df88722c9870b"
+readonly MUSL_ZIP_NAME="musl-on-termux-aarch64.zip"
 
 readonly RC_MARKER_BEGIN="# >>> claude-termux self-heal >>>"
 readonly RC_MARKER_END="# <<< claude-termux self-heal <<<"
 
-readonly MIN_FREE_MB=700
+# 280MB tgz + 280MB extracted (during atomic swap, old + new both
+# exist) + ~100MB npm temp → ~800MB peak. Do not lower this.
+readonly MIN_FREE_MB=800
 
 if [[ -t 2 ]] && [[ -z "${NO_COLOR:-}" ]]; then
   readonly C_RST=$'\033[0m' C_RED=$'\033[1;31m' C_GRN=$'\033[1;32m'
@@ -218,8 +255,9 @@ remove_marker_block() {
 
 is_binary_pristine() {
   [[ -x "$CLAUDE_BIN" ]] || return 1
-  file "$CLAUDE_BIN" 2>/dev/null \
-    | grep -q "interpreter /lib/ld-musl-aarch64.so.1"
+  # readelf is more reliable than `file` across Termux versions.
+  readelf -l "$CLAUDE_BIN" 2>/dev/null \
+    | grep -q "Requesting program interpreter: /lib/ld-musl-aarch64.so.1"
 }
 
 get_installed_version() {
@@ -256,7 +294,9 @@ check_disk_space() {
 ensure_packages() {
   log_info "Ensuring required Termux packages..."
   local missing=()
-  for bin in curl tar node npm file; do
+  # sha256sum is part of coreutils (always present in Termux).
+  # unzip is required to unpack the musl release archive.
+  for bin in curl tar node npm file unzip; do
     command -v "$bin" >/dev/null 2>&1 || missing+=("$bin")
   done
   if [[ ${#missing[@]} -gt 0 ]]; then
@@ -268,6 +308,7 @@ ensure_packages() {
 }
 
 cleanup_previous() {
+  local force="${1:-0}"
   log_info "Cleaning up previous installation artifacts..."
 
   rm -f -- "$LAUNCHER_PATH"         2>/dev/null || true
@@ -277,6 +318,12 @@ cleanup_previous() {
   rm -f -- "$CLAUDE_UNINSTALL_PATH" 2>/dev/null || true
 
   rm -f -- "$ANTHROPIC_DIR"/*.tgz 2>/dev/null || true
+
+  # --force wipes the runtime so install_musl_runtime downloads a fresh copy.
+  if [[ "$force" == "1" ]] && [[ -d "$MUSL_RUNTIME_DIR" ]]; then
+    log_info "Force mode: removing musl runtime"
+    rm -rf -- "$MUSL_RUNTIME_DIR" 2>/dev/null || true
+  fi
 
   local rc
   for rc in "$HOME_DIR/.bashrc" "$HOME_DIR/.zshrc"; do
@@ -290,31 +337,62 @@ cleanup_previous() {
 }
 
 install_musl_runtime() {
-  if [[ -x "$MUSL_LOADER" ]]; then
+  local force="${1:-0}"
+
+  if [[ -x "$MUSL_LOADER" ]] && [[ "$force" != "1" ]]; then
     log_ok "musl runtime already present ($MUSL_RUNTIME_DIR)"
     return 0
   fi
 
-  log_info "Downloading Alpine musl runtime ($ALPINE_VERSION)..."
+  log_info "Downloading patched musl runtime..."
+  log_info "  from: $MUSL_ZIP_URL"
   WORK_DIR="$(mktemp -d)"
+  local zip_path="$WORK_DIR/$MUSL_ZIP_NAME"
 
   curl -fsSL --retry 3 --retry-delay 2 \
-    -o "$WORK_DIR/alpine.tar.gz" "$ALPINE_URL" \
-    || die "Failed to download Alpine minirootfs from $ALPINE_URL"
+    -o "$zip_path" "$MUSL_ZIP_URL" \
+    || die "Failed to download musl runtime from $MUSL_ZIP_URL"
 
-  mkdir -p "$WORK_DIR/alpine" "$MUSL_RUNTIME_DIR"
-  tar -xzf "$WORK_DIR/alpine.tar.gz" -C "$WORK_DIR/alpine" \
-    || die "Failed to extract Alpine minirootfs"
+  # ─── Integrity check ──────────────────────────────────────────────
+  local actual_sha
+  actual_sha="$(sha256sum "$zip_path" | awk '{print $1}')"
+  if [[ "$actual_sha" != "$MUSL_ZIP_SHA256" ]]; then
+    die "SHA256 mismatch!
+  expected: $MUSL_ZIP_SHA256
+  actual:   $actual_sha
+  Refusing to install — the download may be corrupted or tampered with."
+  fi
+  log_ok "SHA256 verified"
 
-  [[ -d "$WORK_DIR/alpine/lib" ]] \
-    && cp -a "$WORK_DIR/alpine/lib/." "$MUSL_RUNTIME_DIR/" 2>/dev/null || true
-  [[ -d "$WORK_DIR/alpine/usr/lib" ]] \
-    && cp -a "$WORK_DIR/alpine/usr/lib/." "$MUSL_RUNTIME_DIR/" 2>/dev/null || true
+  # ─── Extract ──────────────────────────────────────────────────────
+  mkdir -p "$MUSL_RUNTIME_DIR"
+  unzip -o -q "$zip_path" -d "$MUSL_RUNTIME_DIR" \
+    || die "Failed to extract musl runtime archive"
 
-  [[ -x "$MUSL_LOADER" ]] \
-    || die "musl loader was not extracted correctly: $MUSL_LOADER"
+  # ─── Validate extracted loader ────────────────────────────────────
+  [[ -f "$MUSL_LOADER" ]] \
+    || die "musl loader not found after extraction: $MUSL_LOADER"
+  chmod 0755 "$MUSL_LOADER"
+  file "$MUSL_LOADER" 2>/dev/null | grep -q "ARM aarch64" \
+    || die "musl loader is not a valid aarch64 ELF: $MUSL_LOADER"
 
-  log_ok "musl runtime installed ($MUSL_RUNTIME_DIR)"
+  # ─── Make sure libc.so alias exists (some consumers reference it) ──
+  if [[ ! -e "$MUSL_RUNTIME_DIR/libc.so" ]]; then
+    ln -sf -- "ld-musl-aarch64.so.1" "$MUSL_RUNTIME_DIR/libc.so" 2>/dev/null || true
+  fi
+
+  log_ok "Patched musl runtime installed ($MUSL_RUNTIME_DIR)"
+}
+
+ensure_resolv_conf() {
+  mkdir -p "$(dirname "$MUSL_RESOLV_CONF")"
+  if [[ ! -s "$MUSL_RESOLV_CONF" ]]; then
+    log_info "Creating $MUSL_RESOLV_CONF with public DNS servers"
+    printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$MUSL_RESOLV_CONF"
+    log_ok "resolv.conf created"
+  else
+    log_ok "resolv.conf already present ($MUSL_RESOLV_CONF)"
+  fi
 }
 
 install_claude_binary() {
@@ -351,16 +429,50 @@ install_claude_binary() {
   log_info "Installing musl binary - $reason"
   mkdir -p "$ANTHROPIC_DIR"
 
-  (
-    cd "$ANTHROPIC_DIR"
-    rm -rf -- "$CLAUDE_PKG_NAME"
-    rm -f -- anthropic-ai-claude-code-linux-arm64-musl-*.tgz 2>/dev/null || true
+  local tgz_name="anthropic-ai-${CLAUDE_PKG_NAME}-${latest}.tgz"
+  local tgz_path="$ANTHROPIC_DIR/$tgz_name"
+  local tmp_extract="$ANTHROPIC_DIR/.tmp-${CLAUDE_PKG_NAME}-$$"
+  local new_dir="$ANTHROPIC_DIR/${CLAUDE_PKG_NAME}.new-$$"
+  local old_dir="$ANTHROPIC_DIR/${CLAUDE_PKG_NAME}.old-$$"
 
-    npm pack "@anthropic-ai/$CLAUDE_PKG_NAME@$latest" >/dev/null
-    tar -xzf "anthropic-ai-${CLAUDE_PKG_NAME}-${latest}.tgz"
-    mv -- package "$CLAUDE_PKG_NAME"
-    rm -f -- "anthropic-ai-${CLAUDE_PKG_NAME}-${latest}.tgz"
-  ) || die "Failed to fetch or unpack Claude Code musl binary"
+  # Scrub any stale artifacts from prior failed runs.
+  rm -rf -- "$tmp_extract" "$new_dir" "$old_dir"
+  rm -f -- "$tgz_path"
+
+  # ─── Download ─────────────────────────────────────────────────────
+  ( cd "$ANTHROPIC_DIR" && npm pack "@anthropic-ai/$CLAUDE_PKG_NAME@$latest" >/dev/null ) \
+    || { rm -f -- "$tgz_path"; die "npm pack failed for $CLAUDE_PKG_NAME@$latest"; }
+  [[ -f "$tgz_path" ]] || die "npm pack did not produce $tgz_name"
+
+  # ─── Extract to temp dir ──────────────────────────────────────────
+  mkdir -p "$tmp_extract"
+  tar -xzf "$tgz_path" -C "$tmp_extract" \
+    || { rm -rf -- "$tmp_extract" "$tgz_path"; die "Failed to extract $tgz_name"; }
+  rm -f -- "$tgz_path"
+
+  mv -- "$tmp_extract/package" "$new_dir"
+  rm -rf -- "$tmp_extract"
+
+  # ─── Validate new binary before swap ──────────────────────────────
+  [[ -x "$new_dir/claude" ]] \
+    || { rm -rf -- "$new_dir"; die "New package missing claude binary"; }
+  local new_size
+  new_size="$(stat -c%s "$new_dir/claude" 2>/dev/null || echo 0)"
+  [[ "$new_size" -gt 100000000 ]] \
+    || { rm -rf -- "$new_dir"; die "New binary too small ($new_size bytes) — corrupt?"; }
+
+  # ─── Atomic swap ──────────────────────────────────────────────────
+  if [[ -d "$CLAUDE_PKG_DIR" ]]; then
+    mv -- "$CLAUDE_PKG_DIR" "$old_dir" \
+      || { rm -rf -- "$new_dir"; die "Failed to move old package aside"; }
+  fi
+  if mv -- "$new_dir" "$CLAUDE_PKG_DIR"; then
+    rm -rf -- "$old_dir" 2>/dev/null || true
+  else
+    [[ -d "$old_dir" ]] && mv -- "$old_dir" "$CLAUDE_PKG_DIR" 2>/dev/null || true
+    rm -rf -- "$new_dir" 2>/dev/null || true
+    die "Failed to install new package — old package restored"
+  fi
 
   [[ -x "$CLAUDE_BIN" ]] \
     || die "Claude binary not executable after extraction: $CLAUDE_BIN"
@@ -380,10 +492,15 @@ create_launcher_template() {
 # `env -u LD_PRELOAD` is mandatory: Termux injects
 # libtermux-exec-ld-preload.so (Bionic) into every process, and its
 # symbols collide with musl's. Unsetting it lets the musl loader
-# resolve symbols from the bundled Alpine libraries without conflicts.
+# resolve symbols from the bundled musl libraries without conflicts.
+#
+# `MUSL_ON_TERMUX=1` tells the patched musl loader to read DNS
+# configuration from $PREFIX/etc/resolv.conf, and to use the
+# deterministic fallback list (1.1.1.1 → 8.8.8.8 → 127.0.0.1) if
+# no nameserver is configured.
 #
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
-exec env -u LD_PRELOAD \
+exec env -u LD_PRELOAD MUSL_ON_TERMUX=1 \
   "$PREFIX/lib/claude-musl/ld-musl-aarch64.so.1" \
   --library-path "$PREFIX/lib/claude-musl" \
   "$PREFIX/lib/node_modules/@anthropic-ai/claude-code-linux-arm64-musl/claude" \
@@ -437,6 +554,7 @@ set -euo pipefail
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 ANTHROPIC_DIR="$PREFIX/lib/node_modules/@anthropic-ai"
 PKG_DIR="$ANTHROPIC_DIR/claude-code-linux-arm64-musl"
+PKG_NAME="claude-code-linux-arm64-musl"
 
 command -v npm >/dev/null 2>&1 || {
   echo "claude-update: npm not found" >&2
@@ -461,17 +579,59 @@ fi
 
 echo "claude: updating ${INSTALLED:-unknown} -> $LATEST"
 
-(
-  cd "$ANTHROPIC_DIR"
-  rm -rf -- claude-code-linux-arm64-musl
-  npm pack "@anthropic-ai/claude-code-linux-arm64-musl@$LATEST" >/dev/null
-  tar -xzf "anthropic-ai-claude-code-linux-arm64-musl-${LATEST}.tgz"
-  mv -- package claude-code-linux-arm64-musl
-  rm -f -- "anthropic-ai-claude-code-linux-arm64-musl-${LATEST}.tgz"
-) || {
-  echo "claude-update: failed to install version $LATEST" >&2
+mkdir -p "$ANTHROPIC_DIR"
+cd "$ANTHROPIC_DIR"
+
+TGZ="anthropic-ai-${PKG_NAME}-${LATEST}.tgz"
+TMP=".tmp-${PKG_NAME}-$$"
+NEW="${PKG_NAME}.new-$$"
+OLD="${PKG_NAME}.old-$$"
+
+cleanup() {
+  rm -rf -- "$TMP" "$NEW" 2>/dev/null || true
+  rm -f -- "$TGZ" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+rm -rf -- "$TMP" "$NEW" "$OLD"
+rm -f -- "$TGZ"
+
+npm pack "@anthropic-ai/${PKG_NAME}@${LATEST}" >/dev/null || {
+  echo "claude-update: npm pack failed" >&2
   exit 1
 }
+
+mkdir -p "$TMP"
+tar -xzf "$TGZ" -C "$TMP" || {
+  echo "claude-update: failed to extract" >&2
+  exit 1
+}
+mv -- "$TMP/package" "$NEW"
+
+[[ -x "$NEW/claude" ]] || {
+  echo "claude-update: new package missing claude binary" >&2
+  exit 1
+}
+NEW_SIZE="$(stat -c%s "$NEW/claude" 2>/dev/null || echo 0)"
+[[ "$NEW_SIZE" -gt 100000000 ]] || {
+  echo "claude-update: new binary too small ($NEW_SIZE bytes)" >&2
+  exit 1
+}
+
+if [[ -d "$PKG_DIR" ]]; then
+  mv -- "$PKG_DIR" "$OLD" || {
+    echo "claude-update: failed to move old package aside" >&2
+    exit 1
+  }
+fi
+
+if mv -- "$NEW" "$PKG_DIR"; then
+  rm -rf -- "$OLD" 2>/dev/null || true
+else
+  [[ -d "$OLD" ]] && mv -- "$OLD" "$PKG_DIR" 2>/dev/null || true
+  echo "claude-update: failed to install new package — old restored" >&2
+  exit 1
+fi
 
 exec "$PREFIX/bin/claude-fix"
 CLAUDE_UPDATE_EOF
@@ -486,6 +646,15 @@ set -euo pipefail
 
 PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 HOME_DIR="${HOME:-/data/data/com.termux/files/home}"
+
+# Safety: refuse to operate on non-Termux prefixes.
+case "$PREFIX" in
+  */com.termux/files/usr) ;;
+  *)
+    echo "claude-uninstall: refusing to run — PREFIX=$PREFIX is not a Termux prefix" >&2
+    exit 1
+    ;;
+esac
 
 LAUNCHER_PATH="$PREFIX/bin/claude"
 LEGACY_REAL="$PREFIX/bin/claude.real"
@@ -570,26 +739,34 @@ install_launcher() {
 }
 
 verify_installation() {
-  log_info "Verifying installation (raw loader + launcher)..."
+  log_info "Verifying installation..."
 
+  # ─── Raw loader (exactly how the launcher invokes it) ────────────
   local raw
-  raw="$(env -u LD_PRELOAD "$MUSL_LOADER" \
+  raw="$(env -u LD_PRELOAD MUSL_ON_TERMUX=1 "$MUSL_LOADER" \
       --library-path "$MUSL_RUNTIME_DIR" \
       "$CLAUDE_BIN" --version 2>&1 || true)"
   [[ "$raw" == *"Claude Code"* ]] \
-    || die "Raw binary failed to execute. Output: $raw"
-  log_ok "Raw binary OK: $raw"
+    || die "Raw loader failed to execute. Output: $raw"
+  log_ok "Raw loader OK: $raw"
 
+  # ─── Launcher (must work end-to-end) ─────────────────────────────
   local via
   via="$("$LAUNCHER_PATH" --version 2>&1 || true)"
   [[ "$via" == *"Claude Code"* ]] \
     || die "Launcher failed. Output: $via"
   log_ok "Launcher OK: $via"
 
+  # ─── Helper scripts present and executable ───────────────────────
   [[ -x "$CLAUDE_FIX_PATH"       ]] || die "claude-fix not executable"
   [[ -x "$CLAUDE_UPDATE_PATH"    ]] || die "claude-update not executable"
   [[ -x "$CLAUDE_UNINSTALL_PATH" ]] || die "claude-uninstall not executable"
   log_ok "Helper scripts OK"
+
+  # ─── resolv.conf ready for runtime DNS ───────────────────────────
+  [[ -s "$MUSL_RESOLV_CONF" ]] \
+    || die "resolv.conf missing or empty: $MUSL_RESOLV_CONF"
+  log_ok "resolv.conf OK ($MUSL_RESOLV_CONF)"
 }
 
 print_summary() {
@@ -611,6 +788,10 @@ ${C_MAG}${C_BLD}╚════════════════════�
     claude              (first run will prompt for auth)
     # or
     export ANTHROPIC_API_KEY=sk-ant-...
+
+  ${C_BLD}Environment${C_RST}
+    MUSL_ON_TERMUX      Already set to 1 inside the launcher (no action needed)
+    DNS resolv.conf     ${C_CYN}${MUSL_RESOLV_CONF}${C_RST}
 
   ${C_BLD}Installed artifacts${C_RST}
     Launcher     ${C_CYN}${LAUNCHER_PATH}${C_RST}
@@ -639,6 +820,15 @@ SUMMARY
 }
 
 do_uninstall() {
+  # Safety: refuse to operate outside of a Termux prefix.
+  case "$PREFIX" in
+    */com.termux/files/usr) ;;
+    *)
+      die "Refusing to uninstall: PREFIX=$PREFIX does not look like Termux.
+This safeguard prevents accidental damage on non-Termux systems."
+      ;;
+  esac
+
   log_info "Uninstalling $SCRIPT_NAME artifacts..."
 
   rm -f -- "$LAUNCHER_PATH"         2>/dev/null || true
@@ -681,9 +871,13 @@ AFTER INSTALL
 
 WHAT IT DOES
   Downloads the official @anthropic-ai/claude-code-linux-arm64-musl
-  binary from npm, installs Alpine's musl loader and libraries under
-  $PREFIX/lib/claude-musl, and creates a launcher at $PREFIX/bin/claude
-  that runs the binary with the correct loader and LD_PRELOAD unset.
+  binary from npm, downloads the patched musl runtime from
+  github.com/Ryovx/Musl-on-Termux (SHA256-verified), and creates a
+  launcher at $PREFIX/bin/claude that runs the binary with the
+  correct loader, LD_PRELOAD unset, and MUSL_ON_TERMUX=1.
+
+  The patched musl loader reads $PREFIX/etc/resolv.conf and falls
+  back to 1.1.1.1 → 8.8.8.8 → 127.0.0.1 when no nameserver is set.
 
   No patchelf, no proot, no chroot, no container.
   No changes to ~/.bashrc or ~/.zshrc.
@@ -711,8 +905,9 @@ main() {
   check_arch
   check_disk_space
   ensure_packages
-  cleanup_previous
-  install_musl_runtime
+  cleanup_previous "$FORCE"
+  install_musl_runtime "$FORCE"
+  ensure_resolv_conf
   install_claude_binary "$FORCE"
   create_launcher_template
   install_helper_scripts
