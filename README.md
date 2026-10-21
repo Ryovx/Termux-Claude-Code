@@ -11,8 +11,8 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge&logo=gnu&logoColor=white)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-black?style=for-the-badge&logo=android&logoColor=white)](#requirements)
 [![Architecture: aarch64](https://img.shields.io/badge/Architecture-aarch64-orange?style=for-the-badge&logo=arm&logoColor=white)](#requirements)
+[![Version: 2.0.0](https://img.shields.io/badge/Version-2.0.0-brightgreen?style=for-the-badge&logo=github)](#what-gets-installed)
 
-[![Version](https://img.shields.io/github/v/release/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&label=Version&color=brightgreen)](https://github.com/Ryovx/Termux-Claude-Code/releases)
 [![Stars](https://img.shields.io/github/stars/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=yellow)](https://github.com/Ryovx/Termux-Claude-Code/stargazers)
 [![Forks](https://img.shields.io/github/forks/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=blue)](https://github.com/Ryovx/Termux-Claude-Code/network/members)
 [![Issues](https://img.shields.io/github/issues/Ryovx/Termux-Claude-Code?style=for-the-badge&logo=github&color=red)](https://github.com/Ryovx/Termux-Claude-Code/issues)
@@ -51,13 +51,14 @@
 - 🚀 **Native Execution** — Runs the *official* `linux-arm64-musl` binary published by Anthropic.
 - 🛡️ **No proot, no chroot** — No containers, no virtual machines, no emulation.
 - 🔧 **No patchelf** — Deliberately avoids the SIGSEGV that happens when you patch musl binaries on Android kernels.
-- 🌐 **DNS works out of the box** — Ships a patched musl loader that reads `$PREFIX/etc/resolv.conf` and falls back to public DNS when needed.
-- 🔐 **Supply-chain verified** — The musl runtime is downloaded from a signed GitHub release and checked against a pinned SHA256 before installation.
+- 🌐 **Working DNS out of the box** — Uses a **patched musl loader** ([Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux)) that reads `$PREFIX/etc/resolv.conf` and falls back to deterministic public DNS servers.
 - ⚡ **One-command install** — Copy, paste, done.
 - 🔄 **Smart updates** — `claude-update` skips the 280 MB download if you're already on the latest version.
 - 💚 **Self-healing** — `claude-fix` restores the launcher after a manual `npm update`.
 - 🧹 **Clean uninstall** — `claude-uninstall` removes every artifact.
 - 🚫 **Zero rc-file changes** — Never touches `~/.bashrc` or `~/.zshrc`.
+- 🔐 **SHA256-verified** — The musl runtime is integrity-checked before use.
+- 🔐 **Free forever** — GPLv3, community-driven, open source.
 
 ---
 
@@ -93,9 +94,9 @@ claude
 |---|---|
 | **Termux** | From [F-Droid](https://f-droid.org/en/packages/com.termux/) or [GitHub Releases](https://github.com/termux/termux-app/releases) — **NOT** the Play Store version |
 | **Architecture** | `aarch64` (ARM64) only |
-| **Free space** | ~800 MB peak during install (~700 MB steady state) |
+| **Free space** | ~800 MB (280 MB binary + patched musl runtime + headroom) |
 | **Internet** | Required during install and update |
-| **Packages** | `curl`, `tar`, `unzip`, `node`, `npm`, `file` — auto-installed if missing |
+| **Node.js** | Auto-installed by the script if missing |
 | **Root** | ❌ **Not required** |
 
 ---
@@ -127,8 +128,6 @@ claude
 claude /login
 ````
 
-> ⚠️ OAuth on Termux requires a browser handoff that some devices handle poorly. If it fails, use the API key method.
-
 ---
 
 <a id="what-gets-installed"></a>
@@ -140,10 +139,10 @@ claude /login
 | `$PREFIX/bin/claude-fix` | Restores the launcher from template |
 | `$PREFIX/bin/claude-update` | Updates to the latest npm release |
 | `$PREFIX/bin/claude-uninstall` | Removes everything |
-| `$PREFIX/lib/claude-musl/` | Patched musl loader + bundled libraries |
+| `$PREFIX/lib/claude-musl/` | **Patched musl** loader + libc + headers |
 | `$PREFIX/lib/claude-musl/launcher.template` | Source of truth for `claude-fix` |
 | `$PREFIX/lib/node_modules/@anthropic-ai/claude-code-linux-arm64-musl/claude` | The official 280 MB binary |
-| `$PREFIX/etc/resolv.conf` | DNS configuration for musl (created if missing) |
+| `$PREFIX/etc/resolv.conf` | DNS servers (created if missing) |
 
 **Nothing is written outside `$PREFIX`.**
 
@@ -158,38 +157,37 @@ Claude Code ships a `linux-arm64-musl` ELF binary. Termux runs on **Android's Bi
 cannot execute: required file not found
 ````
 
-…because the binary requests `/lib/ld-musl-aarch64.so.1`, which doesn't exist on Android.
-
-### Why not upstream musl?
-
-Upstream musl reads `/etc/resolv.conf` for DNS. Inside Termux, that file is neither readable nor writable, and Android routes DNS through the `netd` system service instead. The result: musl-based programs resolve **nothing** and fail with `EAI_AGAIN` or `getaddrinfo ENOTFOUND`.
-
-### What doesn't work
+**What doesn't work:**
 
 - ❌ **`patchelf`** — changes the ELF interpreter, but the musl loader still SIGSEGVs on the Android kernel.
 - ❌ **`proot` / `chroot`** — heavy, slow, and breaks `claude`'s bash tool.
 - ❌ **The npm wrapper `claude-code-termux`** — broken with Claude Code ≥ 2.1.x.
-- ❌ **Upstream musl** — installs fine, but every DNS lookup fails.
+- ❌ **Stock Alpine musl loader** — works for execution, but **DNS fails** because musl reads `/etc/resolv.conf`, which is not readable in Termux.
 
-### What does work (this project)
+**What does work (this project):**
 
-This installer ships a **patched musl runtime** from [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) (MIT licensed). The patch adds two things:
+1. Download **Alpine's musl runtime** built by [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) — a **patched** musl loader that:
+   - Reads DNS configuration from `$PREFIX/etc/resolv.conf` when `MUSL_ON_TERMUX=1` is set.
+   - Falls back to **`1.1.1.1` → `8.8.8.8` → `127.0.0.1`** when no nameserver is found.
+   - Is **SHA256-verified** before extraction.
+2. Download the **official `linux-arm64-musl` binary** from npm.
+3. Create a **6-line launcher** that unsets `LD_PRELOAD`, sets `MUSL_ON_TERMUX=1`, invokes the patched loader with `--library-path`, and execs the real binary.
+4. Ensure `$PREFIX/etc/resolv.conf` exists with sensible public DNS servers.
 
-1. **`MUSL_ON_TERMUX=1`** — makes the loader read `$PREFIX/etc/resolv.conf` first.
-2. **Deterministic fallback** — if no nameserver is found, use `1.1.1.1`, then `8.8.8.8`, then `127.0.0.1`.
+That's it. **No patchelf, no proot, no chroot, no DNS failures.**
 
-The installer then:
+### Why the patched musl loader?
 
-1. Downloads the **patched musl runtime** from a GitHub release.
-2. **Verifies the SHA256** against a pinned constant. Installation aborts on any mismatch.
-3. Downloads the **official `linux-arm64-musl` binary** from npm.
-4. Creates a **6-line launcher** that:
-   - Unsets `LD_PRELOAD` (Termux's `libtermux-exec-ld-preload.so` is Bionic-linked and crashes musl binaries).
-   - Sets `MUSL_ON_TERMUX=1` so DNS works.
-   - Invokes the musl loader with `--library-path` pointing at `$PREFIX/lib/claude-musl/`.
-   - Execs the real binary.
+Upstream musl reads `/etc/resolv.conf`, which is neither readable nor writable inside Termux. Android routes DNS through the `netd` system service, so musl-based lookups fail with `EAI_AGAIN` or `getaddrinfo failed`.
 
-**No patchelf, no proot, no chroot, no magic.**
+The patched loader from [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) adds:
+
+| Addition | Behavior |
+|---|---|
+| `MUSL_ON_TERMUX=1` env var | Read `$PREFIX/etc/resolv.conf` first |
+| Deterministic DNS fallback | If no nameserver found → `1.1.1.1` → `8.8.8.8` → `127.0.0.1` |
+
+The launcher sets `MUSL_ON_TERMUX=1` unconditionally, so **DNS works with zero user configuration**.
 
 ---
 
@@ -198,8 +196,6 @@ The installer then:
 
 <details>
 <summary><b>`claude: command not found` after install</b></summary>
-
-The launcher is in `$PREFIX/bin`, which should be on `$PATH`. Refresh your shell's command cache:
 
 ````bash
 hash -r
@@ -211,15 +207,13 @@ If still missing, run `claude-fix`.
 </details>
 
 <details>
-<summary><b>`claude` broke after running `npm update -g`</b></summary>
-
-`npm update -g` overwrites the launcher with a broken stub. Restore it:
+<summary><b>`claude` broke after `npm update -g`</b></summary>
 
 ````bash
 claude-fix
 ````
 
-Or use the built-in updater, which handles this automatically:
+Or use the built-in updater:
 
 ````bash
 claude-update
@@ -228,37 +222,34 @@ claude-update
 </details>
 
 <details>
-<summary><b>DNS errors: `EAI_AGAIN`, `getaddrinfo`, `ENOTFOUND`</b></summary>
+<summary><b>`Error relocating ... libtermux-exec-ld-preload.so`</b></summary>
 
-If you upgraded from v1.x, you were using upstream musl without a DNS patch. Force a clean reinstall to get the patched loader:
+The launcher handles this via `env -u LD_PRELOAD`. If you see this, someone bypassed the launcher and ran the binary directly. Use `claude`, not the raw binary path.
 
-````bash
-bash install.sh --force
-````
+</details>
 
-Verify `$PREFIX/etc/resolv.conf` exists:
+<details>
+<summary><b>`EAI_AGAIN`, `getaddrinfo failed`, or DNS timeouts</b></summary>
+
+Check that `$PREFIX/etc/resolv.conf` exists:
 
 ````bash
 cat "$PREFIX/etc/resolv.conf"
 ````
 
-It should contain at least one `nameserver` line. If empty, recreate it:
+It should contain at least one `nameserver` line. If missing, recreate it:
 
 ````bash
+mkdir -p "$PREFIX/etc"
 printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > "$PREFIX/etc/resolv.conf"
 ````
 
-</details>
-
-<details>
-<summary><b>`Error relocating ... libtermux-exec-ld-preload.so`</b></summary>
-
-The launcher handles this via `env -u LD_PRELOAD`. If you see this error, someone bypassed the launcher and ran the binary directly. Use `claude`, not the raw binary path.
+Then retry `claude`.
 
 </details>
 
 <details>
-<summary><b>Segmentation fault (SIGSEGV)</b></summary>
+<summary><b>`Segmentation fault` (SIGSEGV)</b></summary>
 
 You're likely running a `patchelf`-modified binary from an older install. Force a clean reinstall:
 
@@ -269,19 +260,12 @@ bash install.sh --force
 </details>
 
 <details>
-<summary><b>SHA256 mismatch during install</b></summary>
+<summary><b>`SHA256 mismatch` during install</b></summary>
 
-The downloaded musl runtime did not match the pinned SHA256. This can indicate a corrupted download or a tampered asset. Do **not** bypass this check. Re-run the installer; if it persists, open an issue with the exact error.
-
-</details>
-
-<details>
-<summary><b>Update failed midway</b></summary>
-
-`claude-update` is atomic — it removes the old package only after the new one is unpacked and validated. If it failed partway, just re-run:
+The downloaded musl runtime archive was corrupted or tampered with. Retry — if it persists, open an issue.
 
 ````bash
-claude-update
+bash install.sh --force
 ````
 
 </details>
@@ -297,24 +281,13 @@ claude-update
 claude-uninstall
 ````
 
-That removes:
-
-- The launcher and all three helpers
-- The patched musl runtime directory
-- The 280 MB Claude Code binary
-- Any legacy rc-file markers left by older installer versions
-
-**Or**, if you still have `install.sh` locally:
+Or, if you still have `install.sh` locally:
 
 ````bash
 bash install.sh --uninstall
 ````
 
-Your API key and Claude Code settings in `~/.claude/` are **not** touched by default. Delete them manually if desired:
-
-````bash
-rm -rf ~/.claude
-````
+> `claude-uninstall` includes a safety guard that refuses to run outside a Termux `$PREFIX`.
 
 ---
 
@@ -331,21 +304,21 @@ No. Only `aarch64` (ARM64).
 <details>
 <summary><b>Does this modify my shell configuration?</b></summary>
 
-**No.** All commands (`claude`, `claude-fix`, `claude-update`, `claude-uninstall`) are real executables in `$PREFIX/bin`, not shell functions. `~/.bashrc` and `~/.zshrc` are never touched.
+**No.** All commands are real executables in `$PREFIX/bin`, not shell functions.
 
 </details>
 
 <details>
 <summary><b>Does this require root?</b></summary>
 
-**No.** Everything installs into Termux's own `$PREFIX` directory.
+**No.**
 
 </details>
 
 <details>
 <summary><b>Will this work with the Play Store version of Termux?</b></summary>
 
-No. The Play Store version is abandoned. Use [F-Droid](https://f-droid.org/en/packages/com.termux/) or [GitHub Releases](https://github.com/termux/termux-app/releases).
+No. Use [F-Droid](https://f-droid.org/en/packages/com.termux/) or [GitHub Releases](https://github.com/termux/termux-app/releases).
 
 </details>
 
@@ -356,60 +329,33 @@ No. The Play Store version is abandoned. Use [F-Droid](https://f-droid.org/en/pa
 claude-update
 ````
 
-It checks npm for the latest version and skips the download if you're already current.
+</details>
+
+<details>
+<summary><b>Why use a patched musl instead of Alpine's stock loader?</b></summary>
+
+Stock Alpine musl reads `/etc/resolv.conf`, which is inaccessible in Termux. The patched loader from [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) redirects DNS reads to `$PREFIX/etc/resolv.conf` and provides a deterministic fallback when no nameserver is configured. **Without it, network requests from Claude Code fail with DNS errors.**
 
 </details>
 
 <details>
-<summary><b>Why musl and not glibc?</b></summary>
+<summary><b>Is the musl runtime verified?</b></summary>
 
-Anthropic publishes a `linux-arm64-musl` build that works on Android when given the correct loader. The glibc build does not work on Android at all, even with `patchelf` — it SIGSEGVs on startup.
-
-</details>
-
-<details>
-<summary><b>Why a patched musl and not upstream musl?</b></summary>
-
-Upstream musl reads `/etc/resolv.conf`, which Termux does not provide. Without a patch, every DNS lookup fails (`EAI_AGAIN`). The patched loader from [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) adds two improvements:
-
-1. When `MUSL_ON_TERMUX=1` is set, it reads `$PREFIX/etc/resolv.conf`.
-2. If no nameserver is found, it uses `1.1.1.1 → 8.8.8.8 → 127.0.0.1` as a fallback.
-
-The launcher sets `MUSL_ON_TERMUX=1` automatically. You don't need to configure anything.
+Yes. The installer downloads a **signed release archive** from `Ryovx/Musl-on-Termux` and verifies it against a **pinned SHA256** before extraction. Installation aborts on any mismatch.
 
 </details>
 
 <details>
-<summary><b>Is the patched musl runtime safe?</b></summary>
+<summary><b>What if I already have a custom `resolv.conf`?</b></summary>
 
-The installer verifies it against a **pinned SHA256** before use. Any mismatch aborts the install. The source is available at [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) under the MIT license, so you can audit it and rebuild the binary yourself.
+The installer only writes `$PREFIX/etc/resolv.conf` if it does not exist or is empty. Your existing configuration is preserved.
 
 </details>
 
 <details>
 <summary><b>Why not just use `proot-distro`?</b></summary>
 
-You can — but it's slow, it breaks `claude`'s bash tool, and it requires keeping an entire Alpine/Ubuntu rootfs around. This installer avoids all of that by supplying only the loader.
-
-</details>
-
-<details>
-<summary><b>Is my API key safe?</b></summary>
-
-The installer never reads, stores, or transmits your `ANTHROPIC_API_KEY`. It only runs `claude`, which handles auth through its own mechanisms.
-
-</details>
-
-<details>
-<summary><b>Can I see the installer before running it?</b></summary>
-
-**Always.** Download first, review, then run:
-
-````bash
-curl -fsSL https://raw.githubusercontent.com/Ryovx/Termux-Claude-Code/main/install.sh -o install.sh
-less install.sh
-bash install.sh
-````
+It's slow, it breaks `claude`'s bash tool, and it requires keeping an entire rootfs around. This installer avoids all of that.
 
 </details>
 
@@ -432,13 +378,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
 
 This project is licensed under the **GNU General Public License v3.0 or later** (SPDX: `GPL-3.0-or-later`). See [LICENSE](LICENSE) for the full text.
 
-The patched musl runtime bundled by this installer is a separate work, licensed under the **MIT License**. See [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux) for details.
+### 🤝 Open Invention Network (OIN)
 
-### 🤝 Open Innovation Network (OIN)
-
-**Ryovx is a proud member of the [Open Innovation Network (OIN)](https://openinventionnetwork.com/)** — a global consortium that protects open-source software from patent aggression.
+**Ryovx is a proud member of the [Open Invention Network (OIN)](https://openinventionnetwork.com/)** — a global consortium that protects open-source software from patent aggression.
 
 In line with OIN's mission and our commitment to the Termux community, **most of Ryovx's service products are released under GNU GPLv3**.
+
+> The patched musl runtime bundled by this installer is distributed under the **MIT License** by [Ryovx/Musl-on-Termux](https://github.com/Ryovx/Musl-on-Termux). The musl sources it is based on are released under the **MIT License** by the musl project.
 
 ### 💚 Ethical Request — Not a Legal Restriction
 
